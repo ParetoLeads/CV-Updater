@@ -62,7 +62,14 @@
 
       <!-- Progress card -->
       <section class="card hidden" id="progress-card">
-        <h2 class="card-title">Processing</h2>
+        <div class="progress-header">
+          <div>
+            <h2 class="card-title" style="margin-bottom:4px">Processing</h2>
+            <p class="progress-subtitle">This typically takes 30–60 seconds</p>
+          </div>
+          <div class="progress-timer" id="progress-timer">0s</div>
+        </div>
+        <p class="progress-current" id="progress-current"></p>
         <ul class="steps-list" id="steps-list"></ul>
       </section>
 

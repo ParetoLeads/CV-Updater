@@ -63,7 +63,7 @@ async def _process_stream(req: JobRequest):
         company_url = (job_analysis.get("company_url") or "").strip()
         company_text = job_analysis.get("company_description", "")
         if company_url:
-            yield _event("researching", f"Scraping {job_analysis.get('company_name', 'company')} website...")
+            yield _event("company_scrape", f"Scraping {job_analysis.get('company_name', 'company')} website...")
             try:
                 company_text = scrape_url(company_url)
             except Exception as e:
@@ -73,7 +73,7 @@ async def _process_stream(req: JobRequest):
         news = search_recent_news(job_analysis.get("company_name", ""))
         logger.info(f"News search returned {len(news)} results")
 
-        yield _event("researching", "Synthesising company research...")
+        yield _event("company_synthesis", "Synthesising company research...")
         company_research = research_company(
             job_analysis.get("company_name", ""), company_text, news
         )

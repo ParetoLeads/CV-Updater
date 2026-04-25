@@ -13,7 +13,9 @@
       "Bash(claude plugins *)",
       "Bash(git add *)",
       "Bash(git tag *)",
-      "Bash(chmod +x start.sh)"
+      "Bash(chmod +x start.sh)",
+      "Bash(git rm *)",
+      "Bash(bash start.sh)"
     ]
   }
 }

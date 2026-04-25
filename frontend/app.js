@@ -3,14 +3,36 @@ let inputType = "url";
 let systemReady = false;
 
 // ── DOM refs ───────────────────────────────────────────────
-const toggleBtns   = document.querySelectorAll(".toggle-btn");
-const urlField     = document.getElementById("url-field");
-const pasteField   = document.getElementById("paste-field");
-const jobUrl       = document.getElementById("job-url");
-const jobPaste     = document.getElementById("job-paste");
-const processBtn   = document.getElementById("process-btn");
-const recheckBtn   = document.getElementById("recheck-btn");
-const statusMsg    = document.getElementById("status-msg");
+const toggleBtns     = document.querySelectorAll(".toggle-btn");
+const urlField       = document.getElementById("url-field");
+const pasteField     = document.getElementById("paste-field");
+const jobUrl         = document.getElementById("job-url");
+const jobPaste       = document.getElementById("job-paste");
+const processBtn     = document.getElementById("process-btn");
+const recheckBtn     = document.getElementById("recheck-btn");
+const statusMsg      = document.getElementById("status-msg");
+const inputCard      = document.getElementById("input-card");
+const progressCard   = document.getElementById("progress-card");
+const progressTimer  = document.getElementById("progress-timer");
+const progressCurrent = document.getElementById("progress-current");
+const stepsList      = document.getElementById("steps-list");
+const resultsSection = document.getElementById("results-section");
+const newBtn         = document.getElementById("new-btn");
+const cvLink         = document.getElementById("cv-link");
+const sheetLink      = document.getElementById("sheet-link");
+
+// ── Pre-defined step order ─────────────────────────────────
+const STEPS = [
+  { id: "scraping",          label: "Extracting job description" },
+  { id: "analyzing",         label: "Analyzing job requirements & ATS keywords" },
+  { id: "company_scrape",    label: "Researching company website" },
+  { id: "news",              label: "Searching recent news" },
+  { id: "company_synthesis", label: "Synthesising company research" },
+  { id: "matching",          label: "Scoring fit & identifying CV gaps" },
+  { id: "tailoring",         label: "Tailoring CV content" },
+  { id: "creating",          label: "Creating tailored Google Doc" },
+  { id: "logging",           label: "Logging to application tracker" },
+];
 
 // ── Health check ───────────────────────────────────────────
 const SERVICE_LABELS = {
@@ -21,7 +43,6 @@ const SERVICE_LABELS = {
 };
 
 async function runHealthCheck() {
-  // Reset to loading state
   Object.keys(SERVICE_LABELS).forEach(key => {
     const el = document.getElementById(`sc-${key}`);
     if (el) { el.className = "status-item loading"; el.removeAttribute("title"); }
@@ -63,14 +84,7 @@ async function runHealthCheck() {
 }
 
 recheckBtn.addEventListener("click", runHealthCheck);
-runHealthCheck(); // run on page load
-const inputCard    = document.getElementById("input-card");
-const progressCard = document.getElementById("progress-card");
-const stepsList    = document.getElementById("steps-list");
-const resultsSection = document.getElementById("results-section");
-const newBtn       = document.getElementById("new-btn");
-const cvLink       = document.getElementById("cv-link");
-const sheetLink    = document.getElementById("sheet-link");
+runHealthCheck();
 
 // ── Toggle URL / Paste ─────────────────────────────────────
 toggleBtns.forEach(btn => {
@@ -96,53 +110,67 @@ processBtn.addEventListener("click", async () => {
     return;
   }
 
-  // Switch to progress view
+  // Switch to progress view and pre-render all steps as pending
   inputCard.classList.add("hidden");
   resultsSection.classList.add("hidden");
   progressCard.classList.remove("hidden");
-  stepsList.innerHTML = "";
+  progressCurrent.textContent = "Starting...";
 
-  const steps = {};
+  stepsList.innerHTML = STEPS.map(s => `
+    <li class="step-item pending" id="step-${s.id}">
+      <div class="step-icon">○</div>
+      <span>${s.label}</span>
+    </li>
+  `).join("");
 
-  function addStep(step, message) {
-    const li = document.createElement("li");
-    li.className = "step-item active";
-    li.id = `step-${step}`;
-    li.innerHTML = `
-      <div class="step-icon">⟳</div>
-      <span>${message}</span>
-    `;
+  // Start elapsed timer
+  let elapsed = 0;
+  progressTimer.textContent = "0s";
+  const timerInterval = setInterval(() => {
+    elapsed++;
+    progressTimer.textContent = `${elapsed}s`;
+  }, 1000);
+
+  function activateStep(id, message) {
     // Mark previous active step as done
     document.querySelectorAll(".step-item.active").forEach(el => {
-      if (el !== li) {
-        el.classList.remove("active");
-        el.classList.add("done");
-        el.querySelector(".step-icon").textContent = "✓";
-      }
+      el.classList.remove("active");
+      el.classList.add("done");
+      el.querySelector(".step-icon").textContent = "✓";
     });
-    stepsList.appendChild(li);
-    steps[step] = li;
+    const el = document.getElementById(`step-${id}`);
+    if (el) {
+      el.classList.remove("pending");
+      el.classList.add("active");
+      el.querySelector(".step-icon").textContent = "⟳";
+    }
+    progressCurrent.textContent = message;
   }
 
-  function markDone(step) {
-    const el = steps[step];
-    if (!el) return;
-    el.classList.remove("active");
-    el.classList.add("done");
-    el.querySelector(".step-icon").textContent = "✓";
+  function markAllDone() {
+    document.querySelectorAll(".step-item.active, .step-item.pending").forEach(el => {
+      el.classList.remove("active", "pending");
+      el.classList.add("done");
+      el.querySelector(".step-icon").textContent = "✓";
+    });
   }
 
-  function markError(message) {
-    const li = document.createElement("li");
-    li.className = "step-item error";
-    li.innerHTML = `<div class="step-icon">✕</div><span>${message}</span>`;
-    // Mark any active step as error
+  function markStepError(id, message) {
+    // Mark active step as error
     document.querySelectorAll(".step-item.active").forEach(el => {
       el.classList.remove("active");
       el.classList.add("error");
       el.querySelector(".step-icon").textContent = "✕";
     });
-    stepsList.appendChild(li);
+    progressCurrent.textContent = message;
+    progressCurrent.style.color = "var(--red)";
+
+    const retry = document.createElement("button");
+    retry.className = "btn-ghost";
+    retry.textContent = "Try Again";
+    retry.style.marginTop = "16px";
+    retry.onclick = () => resetToInput();
+    progressCard.appendChild(retry);
   }
 
   try {
@@ -152,9 +180,7 @@ processBtn.addEventListener("click", async () => {
       body: JSON.stringify({ input_type: inputType, content }),
     });
 
-    if (!response.ok) {
-      throw new Error(`Server error: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -166,7 +192,7 @@ processBtn.addEventListener("click", async () => {
 
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
-      buffer = lines.pop(); // keep incomplete line in buffer
+      buffer = lines.pop();
 
       for (const line of lines) {
         if (!line.startsWith("data: ")) continue;
@@ -176,28 +202,25 @@ processBtn.addEventListener("click", async () => {
         const { step, message, data } = payload;
 
         if (step === "error") {
-          markError(message);
-          // Show back button
-          const retry = document.createElement("button");
-          retry.className = "btn-ghost";
-          retry.textContent = "Try Again";
-          retry.style.marginTop = "16px";
-          retry.onclick = () => resetToInput();
-          progressCard.appendChild(retry);
+          clearInterval(timerInterval);
+          markStepError(step, message);
           return;
         }
 
         if (step === "complete") {
-          markDone("logging");
-          renderResults(data);
+          clearInterval(timerInterval);
+          markAllDone();
+          progressCurrent.textContent = `Done in ${elapsed}s`;
+          setTimeout(() => renderResults(data), 600);
           return;
         }
 
-        addStep(step, message);
+        activateStep(step, message);
       }
     }
   } catch (err) {
-    markError(err.message || "Unexpected error. Check the server is running.");
+    clearInterval(timerInterval);
+    markStepError("", err.message || "Unexpected error. Check the server is running.");
   }
 });
 
@@ -205,7 +228,6 @@ processBtn.addEventListener("click", async () => {
 function renderResults(data) {
   const { job_analysis, company_research, match_gaps, news, cv_url, sheet_url } = data;
 
-  // Job analysis
   const ja = document.getElementById("job-analysis-content");
   ja.innerHTML = `
     <div class="kv-row"><span class="kv-key">Company</span><span class="kv-val">${esc(job_analysis.company_name)}</span></div>
@@ -217,7 +239,6 @@ function renderResults(data) {
     </div>
   `;
 
-  // Company research
   const cr = document.getElementById("company-content");
   cr.innerHTML = `
     <p style="font-size:.875rem">${esc(company_research.summary)}</p>
@@ -229,7 +250,6 @@ function renderResults(data) {
     </div>
   `;
 
-  // Match score
   const score = match_gaps.match_score || 0;
   const scoreClass = score >= 70 ? "high" : score >= 50 ? "mid" : "low";
   const mc = document.getElementById("match-content");
@@ -239,20 +259,16 @@ function renderResults(data) {
     <p class="match-rationale">${esc(match_gaps.match_rationale || "")}</p>
   `;
 
-  // News
   const nc = document.getElementById("news-content");
-  if (!news || news.length === 0) {
-    nc.innerHTML = `<p class="news-empty">No recent news found for this company.</p>`;
-  } else {
-    nc.innerHTML = news.map(n => `
-      <div class="news-item">
-        <div class="news-title"><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></div>
-        <div class="news-snippet">${esc(n.snippet)}</div>
-      </div>
-    `).join("");
-  }
+  nc.innerHTML = (!news || news.length === 0)
+    ? `<p class="news-empty">No recent news found for this company.</p>`
+    : news.map(n => `
+        <div class="news-item">
+          <div class="news-title"><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></div>
+          <div class="news-snippet">${esc(n.snippet)}</div>
+        </div>
+      `).join("");
 
-  // Gaps & strategy
   const gc = document.getElementById("gaps-content");
   const strategy = match_gaps.cv_strategy ? `<div class="strategy-box">${esc(match_gaps.cv_strategy)}</div>` : "";
   const gapsHtml = (match_gaps.gaps || []).map(g => `
@@ -266,26 +282,26 @@ function renderResults(data) {
   `).join("");
   gc.innerHTML = strategy + gapsHtml;
 
-  // Links
   cvLink.href = cv_url || "#";
   sheetLink.href = sheet_url || "#";
 
-  // Show results
   progressCard.classList.add("hidden");
   resultsSection.classList.remove("hidden");
 }
 
-// ── New application ────────────────────────────────────────
+// ── Reset ──────────────────────────────────────────────────
 newBtn.addEventListener("click", resetToInput);
 
 function resetToInput() {
   jobUrl.value = "";
   jobPaste.value = "";
   stepsList.innerHTML = "";
+  progressCurrent.textContent = "";
+  progressCurrent.style.color = "";
+  progressTimer.textContent = "0s";
   progressCard.classList.add("hidden");
   resultsSection.classList.add("hidden");
   inputCard.classList.remove("hidden");
-  // Remove any retry button appended to progress card
   progressCard.querySelectorAll("button.btn-ghost").forEach(el => el.remove());
 }
 

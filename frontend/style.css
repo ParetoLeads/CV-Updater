@@ -181,6 +181,30 @@ body {
 
 .btn-icon { font-size: 1em; }
 
+/* ── Progress header ──────────────────────────────────────── */
+.progress-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.progress-subtitle { font-size: 0.8125rem; color: var(--muted); }
+.progress-timer {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--blue);
+  letter-spacing: -.5px;
+  min-width: 48px;
+  text-align: right;
+}
+.progress-current {
+  font-size: 0.875rem;
+  color: var(--blue);
+  font-weight: 500;
+  min-height: 1.4em;
+  margin-bottom: 16px;
+}
+
 /* ── Steps ────────────────────────────────────────────────── */
 .steps-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
 .step-item {
@@ -207,6 +231,9 @@ body {
   background: var(--border);
   color: var(--muted);
 }
+.step-item.pending { color: #94A3B8; }
+.step-item.pending .step-icon { background: var(--border); color: #94A3B8; }
+
 .step-item.active .step-icon {
   background: var(--blue-light);
   color: var(--blue);
