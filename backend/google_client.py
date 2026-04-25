@@ -171,7 +171,7 @@ def log_to_sheet(job_info: dict, match_score: int, cv_url: str, job_url: str) ->
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}"
 
 
-def check_duplicate(company_name: str, job_title: str) -> dict | None:
+def check_duplicate(company_name: str, job_title: str):
     """Check if this company+title combo already exists in the tracker. Returns existing row data or None."""
     try:
         creds = _creds()
