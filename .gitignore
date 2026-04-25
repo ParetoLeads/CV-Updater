@@ -1,0 +1,11 @@
+.env
+google_credentials.json
+local_config.json
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+backend/venv/
+backend/.venv/
+*.egg-info/
+.pytest_cache/

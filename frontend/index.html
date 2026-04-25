@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CV Updater</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo">
+          <span class="logo-icon">✦</span>
+          <span class="logo-text">CV Updater</span>
+        </div>
+        <p class="header-sub">Tailored CVs for Tahel</p>
+      </div>
+    </header>
+
+    <main class="main">
+
+      <!-- Input card -->
+      <section class="card" id="input-card">
+        <h2 class="card-title">New Application</h2>
+
+        <div class="toggle-row">
+          <button class="toggle-btn active" data-type="url">Job URL</button>
+          <button class="toggle-btn" data-type="paste">Paste Description</button>
+        </div>
+
+        <div id="url-field" class="field">
+          <label for="job-url">Job posting URL</label>
+          <input id="job-url" type="url" placeholder="https://linkedin.com/jobs/view/..." autocomplete="off" />
+        </div>
+
+        <div id="paste-field" class="field hidden">
+          <label for="job-paste">Paste job description</label>
+          <textarea id="job-paste" rows="10" placeholder="Paste the full job description here — messy copy-paste is fine, we'll clean it up..."></textarea>
+        </div>
+
+        <button class="btn-primary" id="process-btn">
+          <span class="btn-icon">⚡</span> Analyze &amp; Tailor CV
+        </button>
+      </section>
+
+      <!-- Progress card -->
+      <section class="card hidden" id="progress-card">
+        <h2 class="card-title">Processing</h2>
+        <ul class="steps-list" id="steps-list"></ul>
+      </section>
+
+      <!-- Results -->
+      <section class="hidden" id="results-section">
+
+        <div class="results-top-grid">
+          <div class="card">
+            <h3 class="card-title small">Job Analysis</h3>
+            <div id="job-analysis-content" class="card-body"></div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title small">Company Research</h3>
+            <div id="company-content" class="card-body"></div>
+          </div>
+
+          <div class="card match-card">
+            <h3 class="card-title small">Match Score</h3>
+            <div id="match-content" class="card-body"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title small">Recent News</h3>
+          <div id="news-content" class="card-body"></div>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title small">CV Strategy &amp; Gaps</h3>
+          <div id="gaps-content" class="card-body"></div>
+        </div>
+
+        <div class="actions-bar">
+          <a id="cv-link" class="btn-primary" href="#" target="_blank" rel="noopener">
+            <span class="btn-icon">📄</span> View Tailored CV
+          </a>
+          <a id="sheet-link" class="btn-secondary" href="#" target="_blank" rel="noopener">
+            <span class="btn-icon">📊</span> View Tracker
+          </a>
+          <button class="btn-ghost" id="new-btn">Start New</button>
+        </div>
+
+      </section>
+    </main>
+
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

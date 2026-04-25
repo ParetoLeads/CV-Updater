@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(git init *)",
+      "Bash(git remote *)",
+      "Bash(git checkout *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(claude mcp *)",
+      "WebFetch(domain:claude.com)",
+      "Bash(claude plugins *)",
+      "Bash(git add *)",
+      "Bash(git tag *)",
+      "Bash(chmod +x start.sh)"
+    ]
+  }
+}
