@@ -13,7 +13,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 
 from scraper import scrape_url, scrape_company_pages, clean_pasted_text, LinkedInURLError
 from analyzer import analyze_job, build_company_analysis, calculate_match_and_gaps, tailor_cv
-from news_search import search_recent_news
+from news_search import search_recent_news, find_company_url
 from google_client import create_tailored_cv_doc, log_to_sheet, check_duplicate, read_base_cv_text
 from health_check import run_all_checks
 from logger import logger
@@ -74,6 +74,16 @@ async def _process_stream(req: JobRequest):
                 return
 
         company_url = (job_analysis.get("company_url") or "").strip()
+        if not company_url:
+            company_name = job_analysis.get("company_name", "")
+            if company_name:
+                logger.info(f"No company URL in job post — searching for {company_name} website...")
+                company_url = find_company_url(company_name)
+                if company_url:
+                    logger.info(f"Company URL found: {company_url}")
+                else:
+                    logger.warning(f"Could not find company URL for: {company_name}")
+
         company_text = job_analysis.get("company_description", "")
         if company_url:
             yield _event("company_scrape", f"Researching {job_analysis.get('company_name', 'company')} website and About page...")

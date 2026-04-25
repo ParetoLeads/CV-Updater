@@ -84,37 +84,47 @@ def scrape_url(url: str, max_chars: int = 15000) -> str:
         raise ValueError(f"Could not scrape URL (tried both requests and Playwright): {e}")
 
 
+def _try_paths(origin: str, paths: list, max_chars: int = 4000) -> str:
+    """Try each path in order, return text from the first one that yields real content."""
+    for path in paths:
+        try:
+            text = _scrape_with_requests(origin + path)
+            if len(text) > 200 and not _looks_like_template(text):
+                return text[:max_chars]
+        except Exception:
+            continue
+    return ""
+
+
 def scrape_company_pages(base_url: str, max_total_chars: int = 12000) -> str:
-    """Scrape homepage + first successful About/Mission page. Returns combined text."""
+    """Scrape homepage + About page + Product/Solutions page. Returns combined text."""
     if not base_url or "linkedin.com" in base_url:
         return ""
 
     parsed = urlparse(base_url)
     origin = f"{parsed.scheme}://{parsed.netloc}"
 
-    ABOUT_PATHS = ["/about", "/about-us", "/company", "/our-story", "/mission", "/who-we-are", "/team"]
+    ABOUT_PATHS   = ["/about", "/about-us", "/company", "/our-story", "/mission", "/who-we-are", "/team"]
+    PRODUCT_PATHS = ["/product", "/products", "/solutions", "/platform", "/services", "/what-we-do", "/features"]
 
     homepage_text = ""
     try:
-        homepage_text = scrape_url(base_url)
+        homepage_text = scrape_url(base_url)[:5000]
     except Exception:
         pass
 
-    about_text = ""
-    for path in ABOUT_PATHS:
-        try:
-            text = _scrape_with_requests(origin + path)
-            if len(text) > 200 and not _looks_like_template(text):
-                about_text = text
-                break
-        except Exception:
-            continue
+    about_text   = _try_paths(origin, ABOUT_PATHS,   max_chars=4000)
+    product_text = _try_paths(origin, PRODUCT_PATHS, max_chars=3000)
 
-    parts = [p for p in [homepage_text, about_text] if p]
-    if len(parts) > 1:
-        combined = "\n\n--- About Page ---\n\n".join(parts)
-    else:
-        combined = parts[0] if parts else ""
+    sections = []
+    if homepage_text:
+        sections.append(homepage_text)
+    if about_text:
+        sections.append(f"--- About / Mission ---\n\n{about_text}")
+    if product_text:
+        sections.append(f"--- Product / Solutions ---\n\n{product_text}")
+
+    combined = "\n\n".join(sections)
     return combined[:max_total_chars]
 
 
