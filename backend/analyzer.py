@@ -1,11 +1,15 @@
 import json
 import os
 import re
+from pathlib import Path
 
 import anthropic
 
 client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY", ""))
 MODEL = "claude-sonnet-4-6"
+
+_TONE_PATH = Path(__file__).parent.parent / "Tone.md"
+TONE_GUIDE = _TONE_PATH.read_text() if _TONE_PATH.exists() else ""
 
 
 def _parse_json(text: str) -> dict:
@@ -143,9 +147,12 @@ def tailor_cv(
 STRICT RULES:
 - Every claim must be real and traceable to her profile below — do NOT invent anything
 - Naturally weave in these ATS keywords: {keywords}
-- Use strong action verbs (Led, Drove, Spearheaded, Architected, Launched, etc.)
+- Use strong action verbs (Led, Grew, Built, Managed, Launched, Closed, Delivered, etc.)
 - Quantify achievements wherever the profile supports it
 - Keep content to 1–2 pages worth of text
+
+TONE AND WRITING RULES (follow without exception):
+{TONE_GUIDE}
 
 TAHEL'S PROFILE (source of truth):
 {tahel_profile}

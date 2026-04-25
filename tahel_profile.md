@@ -19,7 +19,7 @@ _Last updated: April 2025. Status: COMPLETE ✅_
 
 ## 2. Professional Summary
 
-Tahel is a Senior Account Manager in AdTech with 3+ years at AdMaven and 7+ years of total sales and client management experience across programmatic advertising, financial services, and premium retail. She manages a portfolio of ~300 active publisher accounts generating ~$500K in revenue, and has ranked #1 in revenue generation for three consecutive quarters. She combines sharp analytical thinking (Tableau, SimilarWeb, HubSpot) with a relationship-first selling style built over years of high-pressure, results-driven environments — from mall floors in Toronto to AdTech in Tel Aviv. She is now seeking a senior-level role at a structured, mid-to-large company (50–200+ employees) in AdTech or a marketing-adjacent field.
+Tahel is a Senior Account Manager in AdTech with 3+ years at AdMaven and 7+ years of total sales and client management experience across programmatic advertising, financial services, and premium retail. She manages a portfolio of ~300 active publisher accounts generating ~$500K in revenue, and has ranked #1 in revenue generation for three consecutive quarters. She combines sharp analytical thinking (Tableau, SimilarWeb, HubSpot) with a relationship-first selling style built over years of high-pressure, results-driven environments — from mall floors in Toronto to AdTech in Tel Aviv. She is now seeking a senior-level role at a structured company with 50+ employees in AdTech or a marketing-adjacent field.
 
 ---
 
@@ -217,8 +217,8 @@ _(No other formal academic degrees)_
 - **Target industries (secondary):** Marketing technology, SaaS (marketing-adjacent), digital agencies, any field where the product doesn't require deep technical expertise to sell
 - **Not a fit:** Roles requiring highly technical product knowledge (e.g. complex cybersecurity); pure enterprise / C-suite-only sales; remote-only positions; SDR/pure cold outreach roles
 - **Target client type:** Mid-market to large accounts. NOT pure enterprise deals. Comfortable owning and growing medium-to-large accounts over time.
-- **Target company size:** 50–200+ employees minimum. Wants structure, an established team, and room to grow.
-- **Salary expectation:** Minimum 20,000 NIS/month base (excluding bonus)
+- **Target company size:** 50+ employees minimum. Prefers not to join companies with fewer than 50 people. Wants structure, an established team, and room to grow.
+- **Salary expectation:** Minimum 20,000 NIS/month base (excluding bonus). Exception: if the role explicitly requires working Fridays or US time zone hours, the minimum rises to 25,000 NIS/month base.
 - **What motivates her:**
   - Being consistent and achieving her KPIs
   - Finding new opportunities and bringing ideas to the team that haven't been done before
