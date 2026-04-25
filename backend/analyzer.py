@@ -52,56 +52,85 @@ For ats_keywords: include every technical skill, tool, methodology, certificatio
     return _parse_json(response.content[0].text)
 
 
-def research_company(company_name: str, company_text: str, news: list[dict]) -> dict:
-    """Summarize company research from website content and news."""
+def build_company_analysis(
+    company_name: str,
+    company_text: str,
+    news: list[dict],
+    job_analysis: dict,
+) -> dict:
+    """Build a comprehensive Company Analysis from job description, website, and news."""
     news_block = "\n".join(
-        f"- {n['title']}: {n['snippet']}" for n in news[:4]
+        f"- [{n.get('published_date', 'n/d')}] {n['title']}: {n['snippet']}"
+        for n in news[:5]
     ) or "No recent news found."
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=1500,
-        messages=[{
-            "role": "user",
-            "content": f"""Summarize company research for a job applicant. Return ONLY valid JSON.
-
-COMPANY: {company_name}
-
-WEBSITE CONTENT:
-{company_text[:5000] or "Not available."}
-
-RECENT NEWS:
-{news_block}
-
-Return exactly this structure:
-{{
-    "summary": "2-3 sentence overview of what the company does",
-    "mission_values": "their stated mission or core values",
-    "market_position": "their market position, key differentiators, or notable competitors",
-    "growth_stage": "startup | scale-up | established | enterprise",
-    "key_talking_points": [
-        "Specific insight worth mentioning in a cover letter or interview",
-        "Another specific insight",
-        "Another"
-    ],
-    "recent_highlights": [
-        "Recent news item worth referencing to show research depth",
-        "Another"
-    ]
-}}"""
-        }]
+    role_summary = (
+        f"{job_analysis.get('job_title', 'Unknown role')} "
+        f"({job_analysis.get('seniority', '')}) — "
+        f"{job_analysis.get('ideal_candidate_summary', '')}"
     )
-    return _parse_json(response.content[0].text)
 
-
-def calculate_match_and_gaps(job_analysis: dict, tahel_profile: str) -> dict:
-    """Score fit and identify CV gaps between Tahel's profile and the job."""
     response = client.messages.create(
         model=MODEL,
         max_tokens=2000,
         messages=[{
             "role": "user",
-            "content": f"""Compare Tahel's profile to the job requirements. Return ONLY valid JSON.
+            "content": f"""You are building a Company Analysis for a job applicant.
+Synthesise ALL three sources below. Return ONLY valid JSON — no fences, no explanation.
+
+COMPANY: {company_name}
+
+SOURCE 1 — COMPANY WEBSITE (homepage + about pages):
+{company_text[:7000] or "Not available."}
+
+SOURCE 2 — RECENT NEWS:
+{news_block}
+
+SOURCE 3 — THE ROLE BEING APPLIED FOR:
+{role_summary}
+Key requirements: {', '.join(job_analysis.get('key_requirements', [])[:6])}
+Nice to haves: {', '.join(job_analysis.get('nice_to_haves', [])[:4])}
+
+Return exactly this structure:
+{{
+    "overview": "2-3 sentences on what the company does and who they serve",
+    "mission_values": "Their stated mission/core values — quote directly from the website where possible",
+    "market_position": "Their positioning, key differentiators, notable competitors",
+    "growth_stage": "startup | scale-up | established | enterprise",
+    "current_focus": "What the company is actively pushing for right now — draw from news and strategic language on the site",
+    "role_context": "How this specific role connects to the company's current goals — why are they hiring for this now",
+    "key_themes": [
+        "A specific theme from the company's identity Tahel should weave into her CV",
+        "Another — be specific, not generic"
+    ],
+    "key_talking_points": [
+        "A research-backed insight worth mentioning in a cover letter or interview",
+        "Another that shows Tahel understands their current moment, not just their history"
+    ],
+    "recent_highlights": [
+        "Concrete news item with approximate date",
+        "Another if available"
+    ]
+}}
+
+Rules:
+- current_focus and recent_highlights: draw primarily from SOURCE 2
+- mission_values and key_themes: draw primarily from SOURCE 1
+- role_context: cross-reference SOURCE 3 with what you learned from 1 and 2
+- Never invent facts; if a source is unavailable use the other two"""
+        }]
+    )
+    return _parse_json(response.content[0].text)
+
+
+def calculate_match_and_gaps(job_analysis: dict, company_analysis: dict, tahel_profile: str) -> dict:
+    """Score fit and identify CV gaps using job requirements, company context, and Tahel's profile."""
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=2000,
+        messages=[{
+            "role": "user",
+            "content": f"""Compare Tahel's profile to the job requirements and company context. Return ONLY valid JSON.
 
 TAHEL'S PROFILE:
 {tahel_profile}
@@ -109,10 +138,18 @@ TAHEL'S PROFILE:
 JOB REQUIREMENTS:
 {json.dumps(job_analysis, indent=2)}
 
+COMPANY CONTEXT:
+{json.dumps({
+    "current_focus": company_analysis.get("current_focus", ""),
+    "role_context": company_analysis.get("role_context", ""),
+    "key_themes": company_analysis.get("key_themes", []),
+    "growth_stage": company_analysis.get("growth_stage", ""),
+}, indent=2)}
+
 Return exactly this structure:
 {{
     "match_score": <integer 1-100>,
-    "match_rationale": "2-3 sentences explaining the score honestly",
+    "match_rationale": "2-3 sentences explaining the score honestly — reference both the role requirements and the company's current focus",
     "strong_matches": ["Area where Tahel is a strong fit", "..."],
     "gaps": [
         {{
@@ -121,7 +158,7 @@ Return exactly this structure:
             "suggestion": "How to address or minimise this gap in the CV"
         }}
     ],
-    "cv_strategy": "Overall CV tailoring strategy — what to lead with, what to emphasise, what to de-emphasise"
+    "cv_strategy": "Overall CV tailoring strategy — what to lead with, what to emphasise, what to de-emphasise. Reference the company's current_focus and role_context to make this specific."
 }}"""
         }]
     )
@@ -130,7 +167,7 @@ Return exactly this structure:
 
 def tailor_cv(
     job_analysis: dict,
-    company_research: dict,
+    company_analysis: dict,
     match_gaps: dict,
     tahel_profile: str,
     base_cv_text: str = "",
@@ -164,6 +201,11 @@ BASE CV (edit this — preserve structure, keep all facts):
 JOB ANALYSIS:
 {json.dumps(job_analysis, indent=2)}
 
+COMPANY CONTEXT (calibrate tone, word choice, and emphasis from this):
+- Current focus: {company_analysis.get('current_focus', 'N/A')}
+- Role context: {company_analysis.get('role_context', 'N/A')}
+- Key themes to weave in: {', '.join(company_analysis.get('key_themes', []))}
+
 TAILORING STRATEGY:
 {json.dumps(match_gaps, indent=2)}
 
@@ -187,8 +229,8 @@ TAHEL'S PROFILE (source of truth):
 JOB ANALYSIS:
 {json.dumps(job_analysis, indent=2)}
 
-COMPANY RESEARCH:
-{json.dumps(company_research, indent=2)}
+COMPANY ANALYSIS:
+{json.dumps(company_analysis, indent=2)}
 
 TAILORING STRATEGY:
 {json.dumps(match_gaps, indent=2)}

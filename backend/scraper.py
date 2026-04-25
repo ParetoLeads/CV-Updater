@@ -1,6 +1,7 @@
 import re
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 
 
 HEADERS = {
@@ -81,6 +82,40 @@ def scrape_url(url: str, max_chars: int = 15000) -> str:
         return _scrape_with_playwright(url, max_chars)
     except Exception as e:
         raise ValueError(f"Could not scrape URL (tried both requests and Playwright): {e}")
+
+
+def scrape_company_pages(base_url: str, max_total_chars: int = 12000) -> str:
+    """Scrape homepage + first successful About/Mission page. Returns combined text."""
+    if not base_url or "linkedin.com" in base_url:
+        return ""
+
+    parsed = urlparse(base_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+
+    ABOUT_PATHS = ["/about", "/about-us", "/company", "/our-story", "/mission", "/who-we-are", "/team"]
+
+    homepage_text = ""
+    try:
+        homepage_text = scrape_url(base_url)
+    except Exception:
+        pass
+
+    about_text = ""
+    for path in ABOUT_PATHS:
+        try:
+            text = _scrape_with_requests(origin + path)
+            if len(text) > 200 and not _looks_like_template(text):
+                about_text = text
+                break
+        except Exception:
+            continue
+
+    parts = [p for p in [homepage_text, about_text] if p]
+    if len(parts) > 1:
+        combined = "\n\n--- About Page ---\n\n".join(parts)
+    else:
+        combined = parts[0] if parts else ""
+    return combined[:max_total_chars]
 
 
 def clean_pasted_text(raw: str, max_chars: int = 15000) -> str:

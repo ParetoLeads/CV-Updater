@@ -11,8 +11,8 @@ from pydantic import BaseModel
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from scraper import scrape_url, clean_pasted_text, LinkedInURLError
-from analyzer import analyze_job, research_company, calculate_match_and_gaps, tailor_cv
+from scraper import scrape_url, scrape_company_pages, clean_pasted_text, LinkedInURLError
+from analyzer import analyze_job, build_company_analysis, calculate_match_and_gaps, tailor_cv
 from news_search import search_recent_news
 from google_client import create_tailored_cv_doc, log_to_sheet, check_duplicate, read_base_cv_text
 from health_check import run_all_checks
@@ -76,9 +76,9 @@ async def _process_stream(req: JobRequest):
         company_url = (job_analysis.get("company_url") or "").strip()
         company_text = job_analysis.get("company_description", "")
         if company_url:
-            yield _event("company_scrape", f"Scraping {job_analysis.get('company_name', 'company')} website...")
+            yield _event("company_scrape", f"Researching {job_analysis.get('company_name', 'company')} website and About page...")
             try:
-                company_text = scrape_url(company_url)
+                company_text = scrape_company_pages(company_url)
             except Exception as e:
                 logger.warning(f"Company scrape failed ({company_url}): {e}")
 
@@ -86,18 +86,18 @@ async def _process_stream(req: JobRequest):
         news = search_recent_news(job_analysis.get("company_name", ""))
         logger.info(f"News search returned {len(news)} results")
 
-        yield _event("company_synthesis", "Synthesising company research...")
-        company_research = research_company(
-            job_analysis.get("company_name", ""), company_text, news
+        yield _event("company_analysis", "Building Company Analysis...")
+        company_analysis = build_company_analysis(
+            job_analysis.get("company_name", ""), company_text, news, job_analysis
         )
 
         yield _event("matching", "Scoring fit and identifying CV gaps...")
-        match_gaps = calculate_match_and_gaps(job_analysis, tahel_profile)
+        match_gaps = calculate_match_and_gaps(job_analysis, company_analysis, tahel_profile)
         logger.info(f"Match score: {match_gaps.get('match_score')}/100")
 
         yield _event("tailoring", "Tailoring CV content...")
         base_cv_text = read_base_cv_text()
-        tailored_cv = tailor_cv(job_analysis, company_research, match_gaps, tahel_profile, base_cv_text)
+        tailored_cv = tailor_cv(job_analysis, company_analysis, match_gaps, tahel_profile, base_cv_text)
 
         yield _event("creating", "Creating tailored Google Doc...")
         cv_url = create_tailored_cv_doc(tailored_cv, job_analysis)
@@ -114,7 +114,7 @@ async def _process_stream(req: JobRequest):
 
         yield _event("complete", "Done!", {
             "job_analysis": job_analysis,
-            "company_research": company_research,
+            "company_analysis": company_analysis,
             "match_gaps": match_gaps,
             "news": news,
             "cv_url": cv_url,

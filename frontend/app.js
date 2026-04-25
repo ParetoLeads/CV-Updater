@@ -30,9 +30,9 @@ const sheetLink      = document.getElementById("sheet-link");
 const STEPS = [
   { id: "scraping",          label: "Extracting job description" },
   { id: "analyzing",         label: "Analyzing job requirements & ATS keywords" },
-  { id: "company_scrape",    label: "Researching company website" },
-  { id: "news",              label: "Searching recent news" },
-  { id: "company_synthesis", label: "Synthesising company research" },
+  { id: "company_scrape",   label: "Researching company website and About page" },
+  { id: "news",             label: "Searching recent news" },
+  { id: "company_analysis", label: "Building Company Analysis" },
   { id: "matching",          label: "Scoring fit & identifying CV gaps" },
   { id: "tailoring",         label: "Tailoring CV content" },
   { id: "creating",          label: "Creating tailored Google Doc" },
@@ -265,7 +265,7 @@ async function processRequest(force) {
 
 // ── Render results ─────────────────────────────────────────
 function renderResults(data) {
-  const { job_analysis, company_research, match_gaps, news, cv_url, sheet_url } = data;
+  const { job_analysis, company_analysis, match_gaps, news, cv_url, sheet_url } = data;
 
   const ja = document.getElementById("job-analysis-content");
   ja.innerHTML = `
@@ -280,12 +280,14 @@ function renderResults(data) {
 
   const cr = document.getElementById("company-content");
   cr.innerHTML = `
-    <p style="font-size:.875rem">${esc(company_research.summary)}</p>
+    <p style="font-size:.875rem">${esc(company_analysis.overview || "")}</p>
+    <p style="font-size:.8125rem;color:var(--muted);margin-top:6px">${esc(company_analysis.current_focus || "")}</p>
     <ul class="info-list" style="margin-top:10px">
-      ${(company_research.key_talking_points || []).map(p => `<li>${esc(p)}</li>`).join("")}
+      ${(company_analysis.key_talking_points || []).map(p => `<li>${esc(p)}</li>`).join("")}
     </ul>
     <div class="tags" style="margin-top:10px">
-      <span class="tag green">${esc(company_research.growth_stage || "")}</span>
+      <span class="tag green">${esc(company_analysis.growth_stage || "")}</span>
+      ${(company_analysis.key_themes || []).slice(0, 2).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
     </div>
   `;
 
