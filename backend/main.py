@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from scraper import scrape_url, clean_pasted_text
+from scraper import scrape_url, clean_pasted_text, LinkedInURLError
 from analyzer import analyze_job, research_company, calculate_match_and_gaps, tailor_cv
 from news_search import search_recent_news
 from google_client import create_tailored_cv_doc, log_to_sheet
@@ -49,7 +49,12 @@ async def _process_stream(req: JobRequest):
         yield _event("scraping", "Extracting job description...")
         if req.input_type == "url":
             logger.info(f"Processing job URL: {req.content[:80]}")
-            job_text = scrape_url(req.content)
+            try:
+                job_text = scrape_url(req.content)
+            except LinkedInURLError as e:
+                logger.warning(f"LinkedIn URL blocked: {req.content[:80]}")
+                yield _event("linkedin_error", str(e))
+                return
             job_url = req.content
         else:
             logger.info("Processing pasted job description")

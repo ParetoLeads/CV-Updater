@@ -56,8 +56,18 @@ def _scrape_with_playwright(url: str, max_chars: int = 15000) -> str:
     return _parse_html(html, max_chars)
 
 
+class LinkedInURLError(ValueError):
+    pass
+
+
 def scrape_url(url: str, max_chars: int = 15000) -> str:
     """Fetch a URL and return cleaned plain text. Uses Playwright for JS-heavy pages."""
+    if "linkedin.com" in url:
+        raise LinkedInURLError(
+            "LinkedIn requires login to view job posts — scraping isn't possible. "
+            "Please switch to 'Paste Description' and copy the job text directly from LinkedIn."
+        )
+
     # Try fast path first
     try:
         text = _scrape_with_requests(url)

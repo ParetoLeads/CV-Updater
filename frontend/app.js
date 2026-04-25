@@ -201,6 +201,25 @@ processBtn.addEventListener("click", async () => {
 
         const { step, message, data } = payload;
 
+        if (step === "linkedin_error") {
+          clearInterval(timerInterval);
+          progressCard.classList.add("hidden");
+          inputCard.classList.remove("hidden");
+          // Switch to paste mode and show the message
+          toggleBtns.forEach(b => b.classList.remove("active"));
+          document.querySelector('.toggle-btn[data-type="paste"]').classList.add("active");
+          inputType = "paste";
+          urlField.classList.add("hidden");
+          pasteField.classList.remove("hidden");
+          jobPaste.placeholder = "Paste the LinkedIn job description here...";
+          jobPaste.focus();
+          const banner = document.createElement("p");
+          banner.className = "linkedin-banner";
+          banner.textContent = "LinkedIn requires login — paste the job description below instead.";
+          inputCard.insertBefore(banner, inputCard.querySelector(".toggle-row"));
+          return;
+        }
+
         if (step === "error") {
           clearInterval(timerInterval);
           markStepError(step, message);
@@ -303,6 +322,7 @@ function resetToInput() {
   resultsSection.classList.add("hidden");
   inputCard.classList.remove("hidden");
   progressCard.querySelectorAll("button.btn-ghost").forEach(el => el.remove());
+  inputCard.querySelectorAll(".linkedin-banner").forEach(el => el.remove());
 }
 
 // ── Utility ────────────────────────────────────────────────
