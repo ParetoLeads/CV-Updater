@@ -75,7 +75,7 @@ def _get_or_create_company_folder(drive, company_name: str, parent_id: str = Non
 
 def _find_base_cv_id(drive) -> str:
     """Return the file ID of 'Tahel Tabacznik - Base CV'. Checks env var first, then searches by name."""
-    base_cv_id = os.getenv("GOOGLE_BASE_CV_ID", "").strip()
+    base_cv_id = os.getenv("GOOGLE_CV_TEMPLATE_ID", "").strip()
     if base_cv_id:
         return base_cv_id
 

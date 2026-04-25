@@ -82,7 +82,7 @@ uvicorn main:app --host 0.0.0.0 --port 8080 --reload
 ANTHROPIC_API_KEY=
 TAVILY_API_KEY=
 GOOGLE_OUTPUT_FOLDER_ID=    ← Drive folder ID where company subfolders are created
-GOOGLE_BASE_CV_ID=          ← optional: file ID of "Tahel Tabacznik - Base CV" (app searches by name if blank)
+GOOGLE_CV_TEMPLATE_ID=          ← optional: file ID of "Tahel Tabacznik - Base CV" (app searches by name if blank)
 GOOGLE_SHEET_ID=            ← auto-created on first run if blank
 ```
 

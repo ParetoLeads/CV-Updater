@@ -143,12 +143,9 @@ def tailor_cv(
 
 WHAT TO EDIT:
 - Rewrite the professional summary to speak directly to this role and company type
-- For each role, rewrite the bullet points to emphasise what matters most for THIS job:
-    - Sales/closing role: lead with revenue, pipeline, conversion, closing deals
-    - Account management/CS role: lead with retention, relationship depth, expansion, satisfaction
-    - BDR/outbound role: lead with prospecting, pipeline generation, outreach volume
+- For each role in the CV, rewrite the bullet points to lead with the skills and outcomes that matter most for THIS specific job — read the job analysis and key requirements to decide what to emphasise
 - Weave in ATS keywords naturally where they fit — do not force them
-- Adjust the overall tone to match the job requirements
+- Adjust the overall tone to match what the job description is asking for
 
 WHAT NOT TO CHANGE:
 - Section order and structure — keep it exactly as it is in the base CV
