@@ -14,7 +14,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from scraper import scrape_url, clean_pasted_text, LinkedInURLError
 from analyzer import analyze_job, research_company, calculate_match_and_gaps, tailor_cv
 from news_search import search_recent_news
-from google_client import create_tailored_cv_doc, log_to_sheet
+from google_client import create_tailored_cv_doc, log_to_sheet, check_duplicate
 from health_check import run_all_checks
 from logger import logger
 
@@ -28,6 +28,7 @@ TAHEL_PROFILE_PATH = Path(__file__).parent.parent / "tahel_profile.md"
 class JobRequest(BaseModel):
     input_type: str  # "url" or "paste"
     content: str
+    force: bool = False  # skip duplicate check
 
 
 def _event(step: str, message: str, data: dict = None) -> str:
@@ -64,6 +65,13 @@ async def _process_stream(req: JobRequest):
         yield _event("analyzing", "Analyzing job requirements and ATS keywords...")
         job_analysis = analyze_job(job_text)
         logger.info(f"Job analyzed: {job_analysis.get('company_name')} — {job_analysis.get('job_title')}")
+
+        if not req.force:
+            dup = check_duplicate(job_analysis.get("company_name", ""), job_analysis.get("job_title", ""))
+            if dup:
+                logger.info(f"Duplicate detected: {dup['company']} — {dup['title']} (logged {dup['date']})")
+                yield _event("duplicate", f"Looks like you already tailored a CV for this one! {dup['company']} — {dup['title']} was processed on {dup['date']}.", dup)
+                return
 
         company_url = (job_analysis.get("company_url") or "").strip()
         company_text = job_analysis.get("company_description", "")

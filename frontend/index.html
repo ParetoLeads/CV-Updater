@@ -60,6 +60,20 @@
         </button>
       </section>
 
+      <!-- Duplicate card -->
+      <section class="card hidden" id="duplicate-card">
+        <div style="font-size:2rem;margin-bottom:10px">⚠️</div>
+        <h2 class="card-title">Already Done!</h2>
+        <p id="duplicate-msg" style="font-size:0.9375rem;color:var(--text);margin-bottom:18px"></p>
+        <div class="actions-bar">
+          <a id="dup-cv-link" class="btn-primary" href="#" target="_blank" rel="noopener">
+            <span class="btn-icon">📄</span> View Existing CV
+          </a>
+          <button class="btn-secondary" id="dup-force-btn">⚡ Process Anyway</button>
+          <button class="btn-ghost" id="dup-back-btn">← Go Back</button>
+        </div>
+      </section>
+
       <!-- Progress card -->
       <section class="card hidden" id="progress-card">
         <div class="progress-header">

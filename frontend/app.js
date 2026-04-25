@@ -12,6 +12,11 @@ const processBtn     = document.getElementById("process-btn");
 const recheckBtn     = document.getElementById("recheck-btn");
 const statusMsg      = document.getElementById("status-msg");
 const inputCard      = document.getElementById("input-card");
+const duplicateCard  = document.getElementById("duplicate-card");
+const dupMsg         = document.getElementById("duplicate-msg");
+const dupCvLink      = document.getElementById("dup-cv-link");
+const dupForceBtn    = document.getElementById("dup-force-btn");
+const dupBackBtn     = document.getElementById("dup-back-btn");
 const progressCard   = document.getElementById("progress-card");
 const progressTimer  = document.getElementById("progress-timer");
 const progressCurrent = document.getElementById("progress-current");
@@ -103,7 +108,10 @@ toggleBtns.forEach(btn => {
 });
 
 // ── Process ────────────────────────────────────────────────
-processBtn.addEventListener("click", async () => {
+processBtn.addEventListener("click", () => processRequest(false));
+dupForceBtn.addEventListener("click", () => processRequest(true));
+
+async function processRequest(force) {
   const content = inputType === "url" ? jobUrl.value.trim() : jobPaste.value.trim();
   if (!content) {
     alert(inputType === "url" ? "Please enter a job URL." : "Please paste a job description.");
@@ -112,6 +120,7 @@ processBtn.addEventListener("click", async () => {
 
   // Switch to progress view and pre-render all steps as pending
   inputCard.classList.add("hidden");
+  duplicateCard.classList.add("hidden");
   resultsSection.classList.add("hidden");
   progressCard.classList.remove("hidden");
   progressCurrent.textContent = "Starting...";
@@ -177,7 +186,7 @@ processBtn.addEventListener("click", async () => {
     const response = await fetch("/api/process", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input_type: inputType, content }),
+      body: JSON.stringify({ input_type: inputType, content, force }),
     });
 
     if (!response.ok) throw new Error(`Server error: ${response.status}`);
@@ -200,6 +209,17 @@ processBtn.addEventListener("click", async () => {
         try { payload = JSON.parse(line.slice(6)); } catch { continue; }
 
         const { step, message, data } = payload;
+
+        if (step === "duplicate") {
+          clearInterval(timerInterval);
+          progressCard.classList.add("hidden");
+          dupMsg.textContent = message;
+          dupCvLink.href = (data && data.cv_url) ? data.cv_url : "#";
+          if (!data || !data.cv_url) dupCvLink.classList.add("hidden");
+          else dupCvLink.classList.remove("hidden");
+          duplicateCard.classList.remove("hidden");
+          return;
+        }
 
         if (step === "linkedin_error") {
           clearInterval(timerInterval);
@@ -310,6 +330,7 @@ function renderResults(data) {
 
 // ── Reset ──────────────────────────────────────────────────
 newBtn.addEventListener("click", resetToInput);
+dupBackBtn.addEventListener("click", resetToInput);
 
 function resetToInput() {
   jobUrl.value = "";
@@ -319,6 +340,7 @@ function resetToInput() {
   progressCurrent.style.color = "";
   progressTimer.textContent = "0s";
   progressCard.classList.add("hidden");
+  duplicateCard.classList.add("hidden");
   resultsSection.classList.add("hidden");
   inputCard.classList.remove("hidden");
   progressCard.querySelectorAll("button.btn-ghost").forEach(el => el.remove());

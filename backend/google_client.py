@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -19,7 +20,7 @@ TOKEN_PATH = PROJECT_ROOT / "token.json"
 SECRETS_PATH = PROJECT_ROOT / "client_secrets.json"
 LOCAL_CONFIG_PATH = PROJECT_ROOT / "local_config.json"
 
-SHEET_HEADERS = ["Date", "Company", "Title", "Seniority", "Match Score", "Job Post Link", "Tailored CV Link"]
+SHEET_HEADERS = ["Date", "Company", "Title", "Seniority", "Match Score", "Job Post Link", "Tailored CV Link", "Submitted?"]
 
 
 def _creds() -> Credentials:
@@ -135,15 +136,74 @@ def log_to_sheet(job_info: dict, match_score: int, cv_url: str, job_url: str) ->
         match_score,
         job_url,
         cv_url,
+        False,  # Submitted?
     ]
-    sheets.spreadsheets().values().append(
+    result = sheets.spreadsheets().values().append(
         spreadsheetId=sheet_id,
-        range="Sheet1!A:G",
+        range="Sheet1!A:H",
         valueInputOption="RAW",
         body={"values": [row]},
     ).execute()
 
+    # Apply checkbox data validation to the Submitted? cell (column H)
+    updated_range = result.get("updates", {}).get("updatedRange", "")
+    row_match = re.search(r":H(\d+)$", updated_range)
+    if row_match:
+        row_idx = int(row_match.group(1)) - 1  # convert to 0-based
+        meta = sheets.spreadsheets().get(spreadsheetId=sheet_id, fields="sheets.properties").execute()
+        grid_id = meta["sheets"][0]["properties"]["sheetId"]
+        sheets.spreadsheets().batchUpdate(
+            spreadsheetId=sheet_id,
+            body={"requests": [{
+                "setDataValidation": {
+                    "range": {
+                        "sheetId": grid_id,
+                        "startRowIndex": row_idx,
+                        "endRowIndex": row_idx + 1,
+                        "startColumnIndex": 7,
+                        "endColumnIndex": 8,
+                    },
+                    "rule": {"condition": {"type": "BOOLEAN"}, "showCustomUi": True},
+                }
+            }]}
+        ).execute()
+
     return f"https://docs.google.com/spreadsheets/d/{sheet_id}"
+
+
+def check_duplicate(company_name: str, job_title: str) -> dict | None:
+    """Check if this company+title combo already exists in the tracker. Returns existing row data or None."""
+    try:
+        creds = _creds()
+        sheets = build("sheets", "v4", credentials=creds)
+        sheet_id = os.getenv("GOOGLE_SHEET_ID", "").strip() or _load_local_config().get("sheet_id", "")
+        if not sheet_id:
+            return None
+
+        result = sheets.spreadsheets().values().get(
+            spreadsheetId=sheet_id,
+            range="Sheet1!A:H",
+        ).execute()
+        rows = result.get("values", [])
+        if len(rows) <= 1:
+            return None
+
+        company_lower = company_name.lower().strip()
+        title_lower = job_title.lower().strip()
+
+        for row in rows[1:]:
+            if len(row) < 3:
+                continue
+            if row[1].lower().strip() == company_lower and row[2].lower().strip() == title_lower:
+                return {
+                    "date": row[0] if len(row) > 0 else "",
+                    "company": row[1] if len(row) > 1 else "",
+                    "title": row[2] if len(row) > 2 else "",
+                    "cv_url": row[6] if len(row) > 6 else "",
+                }
+        return None
+    except Exception:
+        return None  # Never block a run due to a failed check
 
 
 def _create_tracking_sheet(sheets, drive) -> str:
