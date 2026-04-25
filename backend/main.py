@@ -14,7 +14,7 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 from scraper import scrape_url, clean_pasted_text, LinkedInURLError
 from analyzer import analyze_job, research_company, calculate_match_and_gaps, tailor_cv
 from news_search import search_recent_news
-from google_client import create_tailored_cv_doc, log_to_sheet, check_duplicate
+from google_client import create_tailored_cv_doc, log_to_sheet, check_duplicate, read_base_cv_text
 from health_check import run_all_checks
 from logger import logger
 
@@ -96,7 +96,8 @@ async def _process_stream(req: JobRequest):
         logger.info(f"Match score: {match_gaps.get('match_score')}/100")
 
         yield _event("tailoring", "Tailoring CV content...")
-        tailored_cv = tailor_cv(job_analysis, company_research, match_gaps, tahel_profile)
+        base_cv_text = read_base_cv_text()
+        tailored_cv = tailor_cv(job_analysis, company_research, match_gaps, tahel_profile, base_cv_text)
 
         yield _event("creating", "Creating tailored Google Doc...")
         cv_url = create_tailored_cv_doc(tailored_cv, job_analysis)

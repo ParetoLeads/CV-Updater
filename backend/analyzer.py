@@ -133,16 +133,46 @@ def tailor_cv(
     company_research: dict,
     match_gaps: dict,
     tahel_profile: str,
+    base_cv_text: str = "",
 ) -> str:
-    """Generate full tailored CV text grounded entirely in Tahel's real experience."""
+    """Edit the Base CV to fit a specific role, or generate from tahel_profile if base CV unavailable."""
     keywords = ", ".join(job_analysis.get("ats_keywords", [])[:12])
 
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4000,
-        messages=[{
-            "role": "user",
-            "content": f"""You are an expert CV writer. Rewrite Tahel's CV for this specific role.
+    if base_cv_text.strip():
+        instruction = f"""You are an expert CV editor. Edit Tahel's existing CV to better fit this specific role.
+
+WHAT TO EDIT:
+- Rewrite the professional summary to speak directly to this role and company type
+- For each role, rewrite the bullet points to emphasise what matters most for THIS job:
+    - Sales/closing role: lead with revenue, pipeline, conversion, closing deals
+    - Account management/CS role: lead with retention, relationship depth, expansion, satisfaction
+    - BDR/outbound role: lead with prospecting, pipeline generation, outreach volume
+- Weave in ATS keywords naturally where they fit — do not force them
+- Adjust the overall tone to match the job requirements
+
+WHAT NOT TO CHANGE:
+- Section order and structure — keep it exactly as it is in the base CV
+- Job titles, companies, dates, and locations — do not alter any of these
+- The facts and numbers — reframe HOW they are described, never change the actual figures
+- Never add experience that is not in the base CV or profile
+
+ATS KEYWORDS TO WEAVE IN: {keywords}
+
+TONE AND WRITING RULES (follow without exception):
+{TONE_GUIDE}
+
+BASE CV (edit this — preserve structure, keep all facts):
+{base_cv_text}
+
+JOB ANALYSIS:
+{json.dumps(job_analysis, indent=2)}
+
+TAILORING STRATEGY:
+{json.dumps(match_gaps, indent=2)}
+
+Return clean plain text only. Same section structure as the base CV. No markdown # headers, no asterisks."""
+    else:
+        instruction = f"""You are an expert CV writer. Write Tahel's CV for this specific role.
 
 STRICT RULES:
 - Every claim must be real and traceable to her profile below — do NOT invent anything
@@ -166,14 +196,12 @@ COMPANY RESEARCH:
 TAILORING STRATEGY:
 {json.dumps(match_gaps, indent=2)}
 
-Write the CV with these clearly labelled sections:
-1. PROFESSIONAL SUMMARY (3–4 sentences, front-load keywords, show fit for this role)
-2. CORE SKILLS (grouped, ATS-optimised bullet list)
-3. PROFESSIONAL EXPERIENCE (for each role: Job Title | Company | Dates | Location, then 4–6 bullet points)
-4. EDUCATION
-5. CERTIFICATIONS & LANGUAGES (if applicable)
-
+Write the CV with these sections: PROFESSIONAL SUMMARY, CORE SKILLS, PROFESSIONAL EXPERIENCE, EDUCATION, CERTIFICATIONS & LANGUAGES.
 Return clean plain text only — no markdown headers with #, no asterisks for bold."""
-        }]
+
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=4000,
+        messages=[{"role": "user", "content": instruction}],
     )
     return response.content[0].text

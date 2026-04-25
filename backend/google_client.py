@@ -73,8 +73,51 @@ def _get_or_create_company_folder(drive, company_name: str, parent_id: str = Non
     return drive.files().create(body=body, fields="id").execute()["id"]
 
 
+def _find_base_cv_id(drive) -> str:
+    """Return the file ID of 'Tahel Tabacznik - Base CV'. Checks env var first, then searches by name."""
+    base_cv_id = os.getenv("GOOGLE_BASE_CV_ID", "").strip()
+    if base_cv_id:
+        return base_cv_id
+
+    output_folder_id = os.getenv("GOOGLE_OUTPUT_FOLDER_ID", "").strip()
+    parent_clause = f" and '{output_folder_id}' in parents" if output_folder_id else ""
+    query = (
+        f"name='Tahel Tabacznik - Base CV' and mimeType='application/vnd.google-apps.document'"
+        f"{parent_clause} and trashed=false"
+    )
+    hits = drive.files().list(q=query, fields="files(id)", pageSize=1).execute().get("files", [])
+    if hits:
+        return hits[0]["id"]
+
+    # Widen search to all of Drive if not found in the output folder
+    if output_folder_id:
+        hits = drive.files().list(
+            q="name='Tahel Tabacznik - Base CV' and mimeType='application/vnd.google-apps.document' and trashed=false",
+            fields="files(id)", pageSize=1,
+        ).execute().get("files", [])
+        if hits:
+            return hits[0]["id"]
+
+    return ""
+
+
+def read_base_cv_text() -> str:
+    """Export the Base CV as plain text. Returns empty string if not found."""
+    try:
+        creds = _creds()
+        drive = build("drive", "v3", credentials=creds)
+        base_cv_id = _find_base_cv_id(drive)
+        if not base_cv_id:
+            return ""
+        raw = drive.files().export(fileId=base_cv_id, mimeType="text/plain").execute()
+        return raw.decode("utf-8") if isinstance(raw, bytes) else raw
+    except Exception:
+        return ""
+
+
 def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
-    """Create a Google Doc + PDF in a company-named subfolder. Returns the Doc edit URL."""
+    """Copy the Base CV into a company subfolder, replace its text with the tailored version,
+    export a PDF alongside it. Returns the Google Doc edit URL."""
     creds = _creds()
     docs = build("docs", "v1", credentials=creds)
     drive = build("drive", "v3", credentials=creds)
@@ -85,23 +128,15 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
     base_folder_id = os.getenv("GOOGLE_OUTPUT_FOLDER_ID", "").strip() or None
     company_folder_id = _get_or_create_company_folder(drive, company, base_folder_id)
 
-    template_id = os.getenv("GOOGLE_CV_TEMPLATE_ID", "").strip()
+    base_cv_id = _find_base_cv_id(drive)
 
-    if template_id:
+    if base_cv_id:
+        # Copy the Base CV — preserves document structure; we replace text below
         doc = drive.files().copy(
-            fileId=template_id,
+            fileId=base_cv_id,
             body={"name": file_name, "parents": [company_folder_id]},
         ).execute()
         doc_id = doc["id"]
-        existing = docs.documents().get(documentId=doc_id).execute()
-        end_index = existing["body"]["content"][-1]["endIndex"] - 1
-        if end_index > 1:
-            docs.documents().batchUpdate(
-                documentId=doc_id,
-                body={"requests": [
-                    {"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index}}}
-                ]},
-            ).execute()
     else:
         doc = docs.documents().create(body={"title": file_name}).execute()
         doc_id = doc["documentId"]
@@ -112,12 +147,16 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
             fields="id, parents",
         ).execute()
 
-    docs.documents().batchUpdate(
-        documentId=doc_id,
-        body={"requests": [{"insertText": {"location": {"index": 1}, "text": cv_content}}]},
-    ).execute()
+    # Clear existing content and write the tailored text
+    existing = docs.documents().get(documentId=doc_id).execute()
+    end_index = existing["body"]["content"][-1]["endIndex"] - 1
+    requests = []
+    if end_index > 1:
+        requests.append({"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index}}})
+    requests.append({"insertText": {"location": {"index": 1}, "text": cv_content}})
+    docs.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
 
-    # Export the finished doc as PDF and save alongside it
+    # Export as PDF and upload to the same company folder
     pdf_bytes = drive.files().export(fileId=doc_id, mimeType="application/pdf").execute()
     drive.files().create(
         body={"name": file_name, "parents": [company_folder_id]},
@@ -125,7 +164,7 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
         fields="id",
     ).execute()
 
-    # Share the doc so the edit link in the UI is accessible
+    # Share the doc so the edit link in the UI works
     drive.permissions().create(
         fileId=doc_id,
         body={"type": "anyone", "role": "reader"},

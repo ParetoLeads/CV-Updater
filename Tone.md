@@ -70,6 +70,18 @@ These are overused, AI-sounding, or hollow. Replace with specific, concrete lang
 
 ---
 
+## Editing vs. Rewriting
+
+The CV is edited from the Base CV, not written from scratch. This means:
+- The structure, section order, and formatting of the Base CV are preserved
+- Bullet points are reworded to shift emphasis, not replaced wholesale
+- The professional summary is rewritten per role, but stays in the same position
+- All job titles, companies, dates, locations, and hard numbers stay exactly as they appear in the Base CV
+
+The goal is a targeted edit, not a new document. If a sentence still works, keep it.
+
+---
+
 ## General Principle
 
 Read every sentence aloud. If it sounds like something a real person would say, keep it. If it sounds like something a bot generated, rewrite it.
