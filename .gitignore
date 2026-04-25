@@ -1,5 +1,7 @@
 .env
 google_credentials.json
+client_secrets.json
+token.json
 logs/
 local_config.json
 __pycache__/

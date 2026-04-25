@@ -3,7 +3,9 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-from google.oauth2.service_account import Credentials
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 SCOPES = [
@@ -13,20 +15,30 @@ SCOPES = [
 ]
 
 PROJECT_ROOT = Path(__file__).parent.parent
+TOKEN_PATH = PROJECT_ROOT / "token.json"
+SECRETS_PATH = PROJECT_ROOT / "client_secrets.json"
 LOCAL_CONFIG_PATH = PROJECT_ROOT / "local_config.json"
 
 SHEET_HEADERS = ["Date", "Company", "Title", "Seniority", "Match Score", "Job Post Link", "Tailored CV Link"]
 
 
 def _creds() -> Credentials:
-    rel_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "google_credentials.json")
-    full_path = PROJECT_ROOT / rel_path
-    if not full_path.exists():
+    if not SECRETS_PATH.exists():
         raise FileNotFoundError(
-            f"Google credentials not found at '{full_path}'. "
-            "Download the service account JSON from Google Cloud Console and place it in the project root."
+            f"client_secrets.json not found at {SECRETS_PATH}. "
+            "Create OAuth 2.0 credentials (Desktop app) in Google Cloud Console and download them here."
         )
-    return Credentials.from_service_account_file(str(full_path), scopes=SCOPES)
+    creds = None
+    if TOKEN_PATH.exists():
+        creds = Credentials.from_authorized_user_file(str(TOKEN_PATH), SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(str(SECRETS_PATH), SCOPES)
+            creds = flow.run_local_server(port=0)
+        TOKEN_PATH.write_text(creds.to_json())
+    return creds
 
 
 def _load_local_config() -> dict:
@@ -53,9 +65,14 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
     doc_title = f"Tahel CV — {company} — {title} — {date_str}"
 
     template_id = os.getenv("GOOGLE_CV_TEMPLATE_ID", "").strip()
+    output_folder_id = os.getenv("GOOGLE_OUTPUT_FOLDER_ID", "").strip()
+
+    copy_body = {"name": doc_title}
+    if output_folder_id:
+        copy_body["parents"] = [output_folder_id]
 
     if template_id:
-        doc = drive.files().copy(fileId=template_id, body={"name": doc_title}).execute()
+        doc = drive.files().copy(fileId=template_id, body=copy_body).execute()
         doc_id = doc["id"]
         existing = docs.documents().get(documentId=doc_id).execute()
         end_index = existing["body"]["content"][-1]["endIndex"] - 1
@@ -75,6 +92,13 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
     else:
         doc = docs.documents().create(body={"title": doc_title}).execute()
         doc_id = doc["documentId"]
+        if output_folder_id:
+            drive.files().update(
+                fileId=doc_id,
+                addParents=output_folder_id,
+                removeParents="root",
+                fields="id, parents"
+            ).execute()
         docs.documents().batchUpdate(
             documentId=doc_id,
             body={"requests": [

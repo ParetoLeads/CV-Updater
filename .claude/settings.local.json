@@ -15,7 +15,9 @@
       "Bash(git tag *)",
       "Bash(chmod +x start.sh)",
       "Bash(git rm *)",
-      "Bash(bash start.sh)"
+      "Bash(bash start.sh)",
+      "Bash(python3 -c ' *)",
+      "Bash(pkill -f \"uvicorn main:app\")"
     ]
   }
 }

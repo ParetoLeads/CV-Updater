@@ -32,22 +32,27 @@ def check_tavily() -> dict:
 
 
 def check_google() -> dict:
+    secrets_path = CREDS_BASE / "client_secrets.json"
+    token_path = CREDS_BASE / "token.json"
+    if not secrets_path.exists():
+        return {"status": "error", "message": "client_secrets.json not found — download OAuth credentials (Desktop app) from Google Cloud Console"}
+    if not token_path.exists():
+        return {"status": "warning", "message": "Not yet authorised — a browser window will open on first run to sign in with Google"}
     try:
-        creds_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "google_credentials.json")
-        full_path = CREDS_BASE / creds_path
-        if not full_path.exists():
-            return {"status": "error", "message": f"google_credentials.json not found at {full_path}"}
-        from google.oauth2.service_account import Credentials
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
         from googleapiclient.discovery import build
         scopes = [
             "https://www.googleapis.com/auth/documents",
             "https://www.googleapis.com/auth/drive",
             "https://www.googleapis.com/auth/spreadsheets",
         ]
-        creds = Credentials.from_service_account_file(str(full_path), scopes=scopes)
+        creds = Credentials.from_authorized_user_file(str(token_path), scopes)
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
         drive = build("drive", "v3", credentials=creds)
         drive.files().list(pageSize=1, fields="files(id)").execute()
-        return {"status": "ok", "message": "Authenticated"}
+        return {"status": "ok", "message": "Authenticated as your Google account"}
     except Exception as e:
         return {"status": "error", "message": str(e)[:120]}
 
@@ -69,8 +74,9 @@ def run_all_checks() -> dict:
         "google":        check_google(),
         "tahel_profile": check_tahel_profile(),
     }
-    ready = all(
-        checks[k]["status"] == "ok"
-        for k in ("anthropic", "google", "tahel_profile")
+    ready = (
+        checks["anthropic"]["status"] == "ok" and
+        checks["google"]["status"] in ("ok", "warning") and  # warning = not yet signed in, OAuth triggers on first run
+        checks["tahel_profile"]["status"] == "ok"
     )
     return {"checks": checks, "ready": ready}

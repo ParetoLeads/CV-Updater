@@ -21,6 +21,12 @@ source venv/bin/activate
 # Install / update dependencies quietly
 pip install -r requirements.txt -q
 
+# Install Playwright browser on first run
+if [ ! -d "$HOME/.cache/ms-playwright" ] && [ ! -d "$HOME/Library/Caches/ms-playwright" ]; then
+  echo "  🌐 Installing headless browser for JS rendering (first run only)..."
+  python -m playwright install chromium --quiet 2>/dev/null || playwright install chromium
+fi
+
 echo ""
 echo "  ✅ Server is running!"
 echo ""
