@@ -307,6 +307,61 @@ body {
   align-items: center;
 }
 
+/* ── System status ────────────────────────────────────────── */
+.status-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.btn-sm { padding: 5px 12px; font-size: 0.8125rem; }
+
+.status-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: default;
+  position: relative;
+}
+.status-item[title] { cursor: help; }
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.status-item.loading .status-dot {
+  animation: pulse 1s ease-in-out infinite;
+  background: var(--muted);
+}
+.status-item.ok .status-dot    { background: var(--green); }
+.status-item.warning .status-dot { background: var(--amber); }
+.status-item.error .status-dot  { background: var(--red); }
+
+.status-item.ok      { color: #065F46; background: #D1FAE5; }
+.status-item.warning { color: #92400E; background: #FEF3C7; }
+.status-item.error   { color: #991B1B; background: #FEE2E2; }
+
+.status-msg {
+  margin-top: 10px;
+  font-size: 0.8125rem;
+  color: var(--red);
+  font-weight: 500;
+}
+
 /* ── Utilities ────────────────────────────────────────────── */
 .hidden { display: none !important; }
 .kv-row { display: flex; gap: 8px; margin-bottom: 6px; font-size: 0.875rem; }

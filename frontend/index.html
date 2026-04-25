@@ -21,6 +21,21 @@
 
     <main class="main">
 
+      <!-- System status -->
+      <section class="card" id="status-card">
+        <div class="status-header">
+          <h2 class="card-title" style="margin-bottom:0">System Status</h2>
+          <button class="btn-ghost btn-sm" id="recheck-btn">Recheck</button>
+        </div>
+        <div class="status-checks" id="status-checks">
+          <div class="status-item loading" id="sc-anthropic"><span class="status-dot"></span>Anthropic API</div>
+          <div class="status-item loading" id="sc-tavily"><span class="status-dot"></span>Tavily (News)</div>
+          <div class="status-item loading" id="sc-google"><span class="status-dot"></span>Google API</div>
+          <div class="status-item loading" id="sc-tahel_profile"><span class="status-dot"></span>Tahel Profile</div>
+        </div>
+        <p class="status-msg hidden" id="status-msg"></p>
+      </section>
+
       <!-- Input card -->
       <section class="card" id="input-card">
         <h2 class="card-title">New Application</h2>

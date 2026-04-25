@@ -1,5 +1,6 @@
 // ── State ──────────────────────────────────────────────────
 let inputType = "url";
+let systemReady = false;
 
 // ── DOM refs ───────────────────────────────────────────────
 const toggleBtns   = document.querySelectorAll(".toggle-btn");
@@ -8,6 +9,61 @@ const pasteField   = document.getElementById("paste-field");
 const jobUrl       = document.getElementById("job-url");
 const jobPaste     = document.getElementById("job-paste");
 const processBtn   = document.getElementById("process-btn");
+const recheckBtn   = document.getElementById("recheck-btn");
+const statusMsg    = document.getElementById("status-msg");
+
+// ── Health check ───────────────────────────────────────────
+const SERVICE_LABELS = {
+  anthropic:     "Anthropic API",
+  tavily:        "Tavily (News)",
+  google:        "Google API",
+  tahel_profile: "Tahel Profile",
+};
+
+async function runHealthCheck() {
+  // Reset to loading state
+  Object.keys(SERVICE_LABELS).forEach(key => {
+    const el = document.getElementById(`sc-${key}`);
+    if (el) { el.className = "status-item loading"; el.removeAttribute("title"); }
+  });
+  statusMsg.classList.add("hidden");
+  processBtn.disabled = true;
+  recheckBtn.disabled = true;
+  recheckBtn.textContent = "Checking...";
+
+  try {
+    const res = await fetch("/api/health-check");
+    const data = await res.json();
+
+    Object.entries(data.checks).forEach(([key, check]) => {
+      const el = document.getElementById(`sc-${key}`);
+      if (!el) return;
+      el.className = `status-item ${check.status}`;
+      el.setAttribute("title", check.message);
+    });
+
+    systemReady = data.ready;
+    processBtn.disabled = !systemReady;
+
+    if (!systemReady) {
+      const errors = Object.entries(data.checks)
+        .filter(([, c]) => c.status === "error")
+        .map(([k, c]) => `${SERVICE_LABELS[k]}: ${c.message}`)
+        .join(" · ");
+      statusMsg.textContent = errors;
+      statusMsg.classList.remove("hidden");
+    }
+  } catch (e) {
+    statusMsg.textContent = "Could not reach server. Is it running?";
+    statusMsg.classList.remove("hidden");
+  } finally {
+    recheckBtn.disabled = false;
+    recheckBtn.textContent = "Recheck";
+  }
+}
+
+recheckBtn.addEventListener("click", runHealthCheck);
+runHealthCheck(); // run on page load
 const inputCard    = document.getElementById("input-card");
 const progressCard = document.getElementById("progress-card");
 const stepsList    = document.getElementById("steps-list");
