@@ -12,19 +12,21 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
 ]
 
-LOCAL_CONFIG_PATH = Path(__file__).parent.parent / "local_config.json"
+PROJECT_ROOT = Path(__file__).parent.parent
+LOCAL_CONFIG_PATH = PROJECT_ROOT / "local_config.json"
 
 SHEET_HEADERS = ["Date", "Company", "Title", "Seniority", "Match Score", "Job Post Link", "Tailored CV Link"]
 
 
 def _creds() -> Credentials:
-    path = os.getenv("GOOGLE_CREDENTIALS_PATH", "google_credentials.json")
-    if not Path(path).exists():
+    rel_path = os.getenv("GOOGLE_CREDENTIALS_PATH", "google_credentials.json")
+    full_path = PROJECT_ROOT / rel_path
+    if not full_path.exists():
         raise FileNotFoundError(
-            f"Google credentials not found at '{path}'. "
-            "See SETUP.md for instructions on creating a service account."
+            f"Google credentials not found at '{full_path}'. "
+            "Download the service account JSON from Google Cloud Console and place it in the project root."
         )
-    return Credentials.from_service_account_file(path, scopes=SCOPES)
+    return Credentials.from_service_account_file(str(full_path), scopes=SCOPES)
 
 
 def _load_local_config() -> dict:
