@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import re
@@ -8,6 +9,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload
 
 SCOPES = [
     "https://www.googleapis.com/auth/documents",
@@ -54,26 +56,42 @@ def _save_local_config(data: dict) -> None:
     LOCAL_CONFIG_PATH.write_text(json.dumps(config, indent=2))
 
 
+def _get_or_create_company_folder(drive, company_name: str, parent_id: str = None) -> str:
+    """Return the ID of a Drive folder named company_name, creating it if needed."""
+    safe = company_name.replace("\\", "\\\\").replace("'", "\\'")
+    parent_clause = f" and '{parent_id}' in parents" if parent_id else ""
+    query = (
+        f"name='{safe}' and mimeType='application/vnd.google-apps.folder'"
+        f"{parent_clause} and trashed=false"
+    )
+    hits = drive.files().list(q=query, fields="files(id)", pageSize=1).execute().get("files", [])
+    if hits:
+        return hits[0]["id"]
+    body = {"name": company_name, "mimeType": "application/vnd.google-apps.folder"}
+    if parent_id:
+        body["parents"] = [parent_id]
+    return drive.files().create(body=body, fields="id").execute()["id"]
+
+
 def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
-    """Copy the CV template (or create fresh doc) and write tailored content. Returns edit URL."""
+    """Create a Google Doc + PDF in a company-named subfolder. Returns the Doc edit URL."""
     creds = _creds()
     docs = build("docs", "v1", credentials=creds)
     drive = build("drive", "v3", credentials=creds)
 
     company = job_info.get("company_name", "Company")
-    title = job_info.get("job_title", "Position")
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    doc_title = f"Tahel CV — {company} — {title} — {date_str}"
+    file_name = "Tahel Tabacznik - CV"
+
+    base_folder_id = os.getenv("GOOGLE_OUTPUT_FOLDER_ID", "").strip() or None
+    company_folder_id = _get_or_create_company_folder(drive, company, base_folder_id)
 
     template_id = os.getenv("GOOGLE_CV_TEMPLATE_ID", "").strip()
-    output_folder_id = os.getenv("GOOGLE_OUTPUT_FOLDER_ID", "").strip()
-
-    copy_body = {"name": doc_title}
-    if output_folder_id:
-        copy_body["parents"] = [output_folder_id]
 
     if template_id:
-        doc = drive.files().copy(fileId=template_id, body=copy_body).execute()
+        doc = drive.files().copy(
+            fileId=template_id,
+            body={"name": file_name, "parents": [company_folder_id]},
+        ).execute()
         doc_id = doc["id"]
         existing = docs.documents().get(documentId=doc_id).execute()
         end_index = existing["body"]["content"][-1]["endIndex"] - 1
@@ -82,31 +100,32 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
                 documentId=doc_id,
                 body={"requests": [
                     {"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index}}}
-                ]}
+                ]},
             ).execute()
-        docs.documents().batchUpdate(
-            documentId=doc_id,
-            body={"requests": [
-                {"insertText": {"location": {"index": 1}, "text": cv_content}}
-            ]}
-        ).execute()
     else:
-        doc = docs.documents().create(body={"title": doc_title}).execute()
+        doc = docs.documents().create(body={"title": file_name}).execute()
         doc_id = doc["documentId"]
-        if output_folder_id:
-            drive.files().update(
-                fileId=doc_id,
-                addParents=output_folder_id,
-                removeParents="root",
-                fields="id, parents"
-            ).execute()
-        docs.documents().batchUpdate(
-            documentId=doc_id,
-            body={"requests": [
-                {"insertText": {"location": {"index": 1}, "text": cv_content}}
-            ]}
+        drive.files().update(
+            fileId=doc_id,
+            addParents=company_folder_id,
+            removeParents="root",
+            fields="id, parents",
         ).execute()
 
+    docs.documents().batchUpdate(
+        documentId=doc_id,
+        body={"requests": [{"insertText": {"location": {"index": 1}, "text": cv_content}}]},
+    ).execute()
+
+    # Export the finished doc as PDF and save alongside it
+    pdf_bytes = drive.files().export(fileId=doc_id, mimeType="application/pdf").execute()
+    drive.files().create(
+        body={"name": file_name, "parents": [company_folder_id]},
+        media_body=MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype="application/pdf"),
+        fields="id",
+    ).execute()
+
+    # Share the doc so the edit link in the UI is accessible
     drive.permissions().create(
         fileId=doc_id,
         body={"type": "anyone", "role": "reader"},
