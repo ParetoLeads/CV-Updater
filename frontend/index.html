@@ -90,41 +90,58 @@
       <!-- Results -->
       <section class="hidden" id="results-section">
 
-        <div class="results-top-grid">
-          <div class="card">
-            <h3 class="card-title small">Job Analysis</h3>
-            <div id="job-analysis-content" class="card-body"></div>
+        <!-- 1. Job header + score -->
+        <div class="card result-header-card">
+          <div class="result-header-top">
+            <div class="result-job">
+              <div class="result-company" id="r-company"></div>
+              <div class="result-meta">
+                <span id="r-title"></span><span class="result-sep"> · </span><span id="r-level"></span>
+              </div>
+            </div>
+            <div class="result-score-block">
+              <div class="result-score-num" id="r-score"></div>
+              <div class="result-score-sub">/ 100</div>
+            </div>
           </div>
-
-          <div class="card">
-            <h3 class="card-title small">Company Research</h3>
-            <div id="company-content" class="card-body"></div>
-          </div>
-
-          <div class="card match-card">
-            <h3 class="card-title small">Match Score</h3>
-            <div id="match-content" class="card-body"></div>
-          </div>
+          <div class="result-rationale" id="r-rationale"></div>
         </div>
 
-        <div class="card">
-          <h3 class="card-title small">Recent News</h3>
-          <div id="news-content" class="card-body"></div>
+        <!-- 2. About the company -->
+        <div class="card result-section">
+          <div class="result-label">About the company</div>
+          <p class="result-body" id="r-about"></p>
         </div>
 
-        <div class="card">
-          <h3 class="card-title small">CV Strategy &amp; Gaps</h3>
-          <div id="gaps-content" class="card-body"></div>
+        <!-- 3. The role -->
+        <div class="card result-section">
+          <div class="result-label">The role</div>
+          <p class="result-body" id="r-role"></p>
         </div>
 
-        <div class="actions-bar">
-          <a id="cv-link" class="btn-primary" href="#" target="_blank" rel="noopener">
-            <span class="btn-icon">📄</span> View Tailored CV
-          </a>
-          <a id="sheet-link" class="btn-secondary" href="#" target="_blank" rel="noopener">
-            <span class="btn-icon">📊</span> View Tracker
-          </a>
-          <button class="btn-ghost" id="new-btn">Start New</button>
+        <!-- 4. Key insights -->
+        <div class="card result-section">
+          <div class="result-label">Key insights</div>
+          <ul class="result-list" id="r-insights"></ul>
+        </div>
+
+        <!-- 5. CV gaps (hidden if none) -->
+        <div class="card result-section" id="r-gaps-card">
+          <div class="result-label">CV gaps</div>
+          <ul class="result-gaps" id="r-gaps"></ul>
+        </div>
+
+        <!-- 6. Power keywords -->
+        <div class="card result-section">
+          <div class="result-label">Power keywords</div>
+          <div class="result-keywords" id="r-keywords"></div>
+        </div>
+
+        <!-- 7. CTAs -->
+        <div class="result-ctas">
+          <a id="cv-link" class="rcta rcta-primary" href="#" target="_blank" rel="noopener">View tailored CV</a>
+          <a id="sheet-link" class="rcta rcta-secondary" href="#" target="_blank" rel="noopener">Open tracker</a>
+          <button class="rcta rcta-ghost" id="new-btn">Start new</button>
         </div>
 
       </section>
