@@ -46,6 +46,8 @@ CV Updater/
 │   ├── analyzer.py            ← Claude API: job analysis, company research, gap scoring, CV tailoring
 │   ├── news_search.py         ← Tavily news search
 │   ├── google_client.py       ← Google Drive/Docs/Sheets: folder creation, Base CV copy, PDF export
+│   ├── health_check.py        ← API key + credential validation; powers the status card in UI
+│   ├── logger.py              ← structured logging to console + logs/cv_updater.log
 │   └── requirements.txt
 └── frontend/
     ├── index.html
@@ -110,11 +112,22 @@ GOOGLE_SHEET_ID=            ← auto-created on first run if blank
    - Google Sheets: log row with checkbox in Submitted? column
 4. UI shows full results: analysis, company intel, news, match score, gaps, links
 
+## Standing Rule: Documentation
+After every response where you make code changes, update these files before finishing:
+- **CHANGELOG.md** — add a version entry if the change is significant, or note it under the current version
+- **CLAUDE.md** — update the file structure, Key Decisions, or Lessons Learned if anything changed
+- **ISSUES.md** — add any bugs discovered; move to Resolved when fixed
+
+This applies to every code change, no matter how small.
+
+---
+
 ## Key Decisions
 - **SSE streaming**: used for real-time progress (not polling) — better UX for a ~60s process
 - **tahel_profile.md as source of truth**: Claude is instructed to never invent experience
 - **Base CV as edit target**: Claude edits the actual Base CV text rather than writing from scratch — better output quality, preserves Tahel's voice and structure
-- **Base CV is read-only**: the app copies it, edits the copy — the original is never modified
+- **Base CV is read-only**: the app downloads it as .docx, applies changes to a copy — the original is never modified
+- **python-docx for formatting**: `tailor_cv` returns structured JSON (summary + bullets per company); `create_tailored_cv_doc` applies it to the .docx via python-docx, replacing only paragraph text while preserving all run formatting (font, size, bold, spacing), then uploads/converts to Google Doc
 - **Tone.md injected on every run**: writing rules (no em dashes, no AI buzzwords, natural voice) are injected into every tailor_cv call
 - **OAuth2 for Google**: files are owned by Nathan's Google account (service accounts have no Drive storage)
 - **Vanilla JS frontend**: no build step, works on any device on the network
@@ -132,6 +145,56 @@ GOOGLE_SHEET_ID=            ← auto-created on first run if blank
 - Full application built: FastAPI backend + vanilla JS frontend
 - SSE chosen over polling for real-time progress feedback
 - tahel_profile.md is the single source of truth for CV content
-- Google service account preferred over OAuth for simplicity in a private tool
+- OAuth2 used for Google (not service accounts) — files are owned by Nathan's account and live in his Drive
 - Tavily API used for news (designed for AI agents, cleaner than raw search)
 - local_config.json stores auto-created Sheet ID without polluting .env
+
+### v0.3.0 — 2026-04-25
+- Health check endpoint added; validates all API keys and Google credentials before the user can submit
+- File + console logging added for debugging production issues without SSH
+
+### v0.4.0 — 2026-04-25
+- Progress steps pre-rendered on submit (not added dynamically) — avoids layout shift and makes state transitions cleaner
+- Questionnaire file removed; tahel_profile.md is the single source of truth from this point forward
+
+### v0.5.0 — 2026-04-25
+- Playwright added as a fallback scraper for JS-heavy job pages
+- Detection heuristic: look for unrendered template patterns (`{{...}}`, `[object Object]`) to decide when to use it
+
+### v1.1.0 — 2026-04-25
+- Duplicate detection prevents re-processing the same role — checks company + job title (case-insensitive) against tracker sheet
+- `force: true` flag lets user bypass duplicate check when needed
+- Tone.md injected into every tailor_cv call to enforce consistent writing style
+
+### v1.2.0 — 2026-04-25
+- Each application now gets its own company subfolder in Google Drive
+- PDF exported alongside the Google Doc — gives Tahel a ready-to-send file
+
+### v1.3.0 — 2026-04-25
+- Switched from generating CV from scratch to editing the Base CV — output quality is significantly better; Tahel's voice and structure are preserved
+- Base CV is exported as plain text from Drive and passed to Claude as the document to edit
+
+### v1.4.0 — 2026-04-25
+- Three-source company analysis (website + news + job description) produces much richer context than website alone
+- GOOGLE_CV_TEMPLATE_ID env var avoids a Drive-wide search on every run
+
+### v1.4.1 — 2026-04-25
+- Company URL is now auto-discovered via Tavily if absent from the job posting
+- Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
+
+### v2.0.0 — 2026-04-29
+- Results page fully redesigned: single-column layout with 7 distinct cards replacing the old 3-column grid
+- Score card shows company/title/level on left, colour-coded match score on right, and italic rationale below a divider
+- Gaps card is hidden when no gaps are returned — avoids empty card flash
+- News feed removed from results view; power keywords shown as pill badges
+- Max-width narrowed to 700px; mobile breakpoint moved to 600px
+
+### v1.5.0 — 2026-04-29
+- Output formatting now matches the base .docx (fonts, sizes, bold headers) — uses python-docx to apply tailored content to the .docx template before uploading to Drive
+- `tailor_cv` returns JSON dict (summary + bullets per company); replaces prior plain-text approach
+
+### v1.4.3 — 2026-04-29
+- Stray `);` in `app.js` caused silent JS parse failure — entire health check and submit flow was dead
+
+### v1.4.2 — 2026-04-25
+- Nav/footer link extraction is more reliable than guessing common paths — works even when a site uses non-standard URL structures

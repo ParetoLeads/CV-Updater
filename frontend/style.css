@@ -69,8 +69,6 @@ body {
   color: var(--text);
   margin-bottom: 16px;
 }
-.card-title.small { font-size: 0.9rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
-.card-body { font-size: 0.875rem; color: var(--text); }
 
 /* ── Toggle ───────────────────────────────────────────────── */
 .toggle-row {
