@@ -261,69 +261,55 @@ async function processRequest(force) {
     clearInterval(timerInterval);
     markStepError("", err.message || "Unexpected error. Check the server is running.");
   }
-});
+}
 
 // ── Render results ─────────────────────────────────────────
 function renderResults(data) {
-  const { job_analysis, company_analysis, match_gaps, news, cv_url, sheet_url } = data;
+  const { job_analysis, company_analysis, match_gaps, cv_url, sheet_url } = data;
 
-  const ja = document.getElementById("job-analysis-content");
-  ja.innerHTML = `
-    <div class="kv-row"><span class="kv-key">Company</span><span class="kv-val">${esc(job_analysis.company_name)}</span></div>
-    <div class="kv-row"><span class="kv-key">Title</span><span class="kv-val">${esc(job_analysis.job_title)}</span></div>
-    <div class="kv-row"><span class="kv-key">Level</span><span class="kv-val">${esc(job_analysis.seniority)}</span></div>
-    <p style="margin-top:10px;font-size:.8125rem;color:#64748B">${esc(job_analysis.ideal_candidate_summary)}</p>
-    <div class="tags" style="margin-top:10px">
-      ${(job_analysis.ats_keywords || []).slice(0, 8).map(k => `<span class="tag">${esc(k)}</span>`).join("")}
-    </div>
-  `;
+  // Job header
+  document.getElementById("r-company").textContent = job_analysis.company_name || "";
+  document.getElementById("r-title").textContent   = job_analysis.job_title    || "";
+  document.getElementById("r-level").textContent   = job_analysis.seniority    || "";
 
-  const cr = document.getElementById("company-content");
-  cr.innerHTML = `
-    <p style="font-size:.875rem">${esc(company_analysis.overview || "")}</p>
-    <p style="font-size:.8125rem;color:var(--muted);margin-top:6px">${esc(company_analysis.current_focus || "")}</p>
-    <ul class="info-list" style="margin-top:10px">
-      ${(company_analysis.key_talking_points || []).map(p => `<li>${esc(p)}</li>`).join("")}
-    </ul>
-    <div class="tags" style="margin-top:10px">
-      <span class="tag green">${esc(company_analysis.growth_stage || "")}</span>
-      ${(company_analysis.key_themes || []).slice(0, 2).map(t => `<span class="tag">${esc(t)}</span>`).join("")}
-    </div>
-  `;
-
+  // Match score + rationale
   const score = match_gaps.match_score || 0;
-  const scoreClass = score >= 70 ? "high" : score >= 50 ? "mid" : "low";
-  const mc = document.getElementById("match-content");
-  mc.innerHTML = `
-    <div class="match-score-num ${scoreClass}">${score}</div>
-    <div class="match-score-label">/ 100</div>
-    <p class="match-rationale">${esc(match_gaps.match_rationale || "")}</p>
-  `;
+  const scoreEl = document.getElementById("r-score");
+  scoreEl.textContent = score;
+  scoreEl.className = "result-score-num " + (score >= 70 ? "high" : score >= 50 ? "mid" : "low");
+  document.getElementById("r-rationale").textContent = match_gaps.match_rationale || "";
 
-  const nc = document.getElementById("news-content");
-  nc.innerHTML = (!news || news.length === 0)
-    ? `<p class="news-empty">No recent news found for this company.</p>`
-    : news.map(n => `
-        <div class="news-item">
-          <div class="news-title"><a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a></div>
-          <div class="news-snippet">${esc(n.snippet)}</div>
-        </div>
-      `).join("");
+  // About the company
+  document.getElementById("r-about").textContent = company_analysis.overview || "";
 
-  const gc = document.getElementById("gaps-content");
-  const strategy = match_gaps.cv_strategy ? `<div class="strategy-box">${esc(match_gaps.cv_strategy)}</div>` : "";
-  const gapsHtml = (match_gaps.gaps || []).map(g => `
-    <div class="gap-item ${g.importance}">
-      <div class="gap-title">
-        <span class="tag ${g.importance === "high" ? "red" : g.importance === "medium" ? "amber" : "green"}">${esc(g.importance)}</span>
-        &nbsp;${esc(g.gap)}
-      </div>
-      <div class="gap-suggestion">${esc(g.suggestion)}</div>
-    </div>
-  `).join("");
-  gc.innerHTML = strategy + gapsHtml;
+  // The role
+  document.getElementById("r-role").textContent = job_analysis.ideal_candidate_summary || "";
 
-  cvLink.href = cv_url || "#";
+  // Key insights
+  document.getElementById("r-insights").innerHTML = (company_analysis.key_talking_points || [])
+    .slice(0, 3)
+    .map(i => `<li>${esc(i)}</li>`)
+    .join("");
+
+  // CV gaps (hide card if none)
+  const gaps = (match_gaps.gaps || []).slice(0, 3);
+  const gapsCard = document.getElementById("r-gaps-card");
+  if (gaps.length === 0) {
+    gapsCard.classList.add("hidden");
+  } else {
+    gapsCard.classList.remove("hidden");
+    document.getElementById("r-gaps").innerHTML = gaps
+      .map(g => `<li>${esc(g.gap)}</li>`)
+      .join("");
+  }
+
+  // Power keywords
+  document.getElementById("r-keywords").innerHTML = (job_analysis.ats_keywords || [])
+    .map(k => `<span class="kw-pill">${esc(k)}</span>`)
+    .join("");
+
+  // CTAs
+  cvLink.href    = cv_url    || "#";
   sheetLink.href = sheet_url || "#";
 
   progressCard.classList.add("hidden");
