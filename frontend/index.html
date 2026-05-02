@@ -40,19 +40,14 @@
       <section class="card" id="input-card">
         <h2 class="card-title">New Application</h2>
 
-        <div class="toggle-row">
-          <button class="toggle-btn active" data-type="url">Job URL</button>
-          <button class="toggle-btn" data-type="paste">Paste Description</button>
+        <div class="field">
+          <label for="job-url">Job URL <span class="field-optional">(optional - saved to tracker)</span></label>
+          <input id="job-url" type="url" placeholder="https://..." autocomplete="off" />
         </div>
 
-        <div id="url-field" class="field">
-          <label for="job-url">Job posting URL</label>
-          <input id="job-url" type="url" placeholder="https://linkedin.com/jobs/view/..." autocomplete="off" />
-        </div>
-
-        <div id="paste-field" class="field hidden">
-          <label for="job-paste">Paste job description</label>
-          <textarea id="job-paste" rows="10" placeholder="Paste the full job description here — messy copy-paste is fine, we'll clean it up..."></textarea>
+        <div class="field">
+          <label for="job-paste">Job Description</label>
+          <textarea id="job-paste" rows="10" placeholder="Paste the full job description here - messy copy-paste is fine, we'll clean it up..."></textarea>
         </div>
 
         <button class="btn-primary" id="process-btn">
@@ -79,7 +74,7 @@
         <div class="progress-header">
           <div>
             <h2 class="card-title" style="margin-bottom:4px">Processing</h2>
-            <p class="progress-subtitle">This typically takes 30–60 seconds</p>
+            <p class="progress-subtitle">This typically takes 30-60 seconds</p>
           </div>
           <div class="progress-timer" id="progress-timer">0s</div>
         </div>
@@ -137,11 +132,12 @@
           <div class="result-keywords" id="r-keywords"></div>
         </div>
 
-        <!-- 7. CTAs -->
+        <!-- 7. CTAs (2x2 grid) -->
         <div class="result-ctas">
-          <a id="cv-link" class="rcta rcta-primary" href="#" target="_blank" rel="noopener">View tailored CV</a>
-          <a id="sheet-link" class="rcta rcta-secondary" href="#" target="_blank" rel="noopener">Open tracker</a>
-          <button class="rcta rcta-ghost" id="new-btn">Start new</button>
+          <a id="cv-link" class="rcta rcta-cv" href="#" target="_blank" rel="noopener">📄 View tailored CV</a>
+          <a id="sheet-link" class="rcta rcta-sheet" href="#" target="_blank" rel="noopener">📊 Open tracker</a>
+          <a id="drive-link" class="rcta rcta-drive" href="#" target="_blank" rel="noopener">📁 View Drive</a>
+          <button class="rcta rcta-new" id="new-btn">✨ Start new</button>
         </div>
 
       </section>

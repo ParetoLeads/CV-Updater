@@ -1,9 +1,14 @@
+import copy
 import io
 import json
 import os
 import re
 from datetime import datetime
 from pathlib import Path
+
+from docx import Document
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -115,9 +120,99 @@ def read_base_cv_text() -> str:
         return ""
 
 
-def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
-    """Copy the Base CV into a company subfolder, replace its text with the tailored version,
-    export a PDF alongside it. Returns the Google Doc edit URL."""
+def _set_para_text(para, new_text: str) -> None:
+    """Replace all text in a paragraph preserving the first run's formatting (font, size, bold, etc.)."""
+    runs = para.runs
+    if not runs:
+        para.add_run(new_text)
+        return
+    rpr = runs[0]._r.find(qn("w:rPr"))
+    for r in para._p.findall(qn("w:r")):
+        para._p.remove(r)
+    new_r = OxmlElement("w:r")
+    if rpr is not None:
+        new_r.append(copy.deepcopy(rpr))
+    new_t = OxmlElement("w:t")
+    new_t.text = new_text
+    new_t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    new_r.append(new_t)
+    para._p.append(new_r)
+
+
+def _replace_bullets_in_doc(doc, company_marker: str, new_bullets: list) -> None:
+    """Find bullet paragraphs after company_marker header and replace with new_bullets.
+    Inserts or removes paragraphs to match the desired count."""
+    paras = doc.paragraphs
+    company_idx = next(
+        (i for i, p in enumerate(paras) if p.text.strip().startswith(company_marker)), None
+    )
+    if company_idx is None:
+        return
+    job_title_idx = next(
+        (i for i in range(company_idx + 1, len(paras)) if paras[i].text.strip()), None
+    )
+    if job_title_idx is None:
+        return
+    bullet_paras = []
+    for i in range(job_title_idx + 1, len(paras)):
+        if not paras[i].text.strip():
+            break
+        bullet_paras.append(paras[i])
+    if not bullet_paras:
+        return
+    n_cur, n_new = len(bullet_paras), len(new_bullets)
+    for i in range(min(n_cur, n_new)):
+        _set_para_text(bullet_paras[i], new_bullets[i])
+    if n_new > n_cur:
+        ref_p = bullet_paras[0]._p
+        insert_after = bullet_paras[-1]._p
+        for i in range(n_cur, n_new):
+            new_p = copy.deepcopy(ref_p)
+            for r in new_p.findall(qn("w:r")):
+                new_p.remove(r)
+            rpr_src = ref_p.find(f".//{qn('w:r')}/{qn('w:rPr')}")
+            new_r = OxmlElement("w:r")
+            if rpr_src is not None:
+                new_r.append(copy.deepcopy(rpr_src))
+            new_t = OxmlElement("w:t")
+            new_t.text = new_bullets[i]
+            new_t.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+            new_r.append(new_t)
+            new_p.append(new_r)
+            insert_after.addnext(new_p)
+            insert_after = new_p
+    elif n_new < n_cur:
+        for para in bullet_paras[n_new:]:
+            para._p.getparent().remove(para._p)
+
+
+def _apply_cv_data(docx_bytes: bytes, cv_data: dict) -> bytes:
+    """Apply structured cv_data to a .docx template, preserving all formatting. Returns modified bytes."""
+    doc = Document(io.BytesIO(docx_bytes))
+    paras = doc.paragraphs
+    summary = cv_data.get("summary", "")
+    if summary:
+        for i, para in enumerate(paras):
+            if para.text.strip() == "Professional Summary":
+                for j in range(i + 1, len(paras)):
+                    if paras[j].text.strip():
+                        _set_para_text(paras[j], summary)
+                        break
+                break
+    if cv_data.get("admaven_bullets"):
+        _replace_bullets_in_doc(doc, "ADMAVEN", cv_data["admaven_bullets"])
+    if cv_data.get("aa_financial_bullets"):
+        _replace_bullets_in_doc(doc, "A. A. Financial", cv_data["aa_financial_bullets"])
+    if cv_data.get("adore_bullets"):
+        _replace_bullets_in_doc(doc, "Adore", cv_data["adore_bullets"])
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()
+
+
+def create_tailored_cv_doc(cv_content, job_info: dict) -> str:
+    """Create a tailored CV Google Doc preserving the base .docx formatting.
+    cv_content: dict with summary + bullets (from tailor_cv). Returns Google Doc edit URL."""
     creds = _creds()
     docs = build("docs", "v1", credentials=creds)
     drive = build("drive", "v3", credentials=creds)
@@ -127,34 +222,63 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
 
     base_folder_id = os.getenv("GOOGLE_OUTPUT_FOLDER_ID", "").strip() or None
     company_folder_id = _get_or_create_company_folder(drive, company, base_folder_id)
-
     base_cv_id = _find_base_cv_id(drive)
+    doc_id = None
 
-    if base_cv_id:
-        # Copy the Base CV — preserves document structure; we replace text below
-        doc = drive.files().copy(
-            fileId=base_cv_id,
-            body={"name": file_name, "parents": [company_folder_id]},
-        ).execute()
-        doc_id = doc["id"]
-    else:
-        doc = docs.documents().create(body={"title": file_name}).execute()
-        doc_id = doc["documentId"]
-        drive.files().update(
-            fileId=doc_id,
-            addParents=company_folder_id,
-            removeParents="root",
-            fields="id, parents",
-        ).execute()
+    if base_cv_id and isinstance(cv_content, dict):
+        try:
+            docx_bytes = drive.files().export(
+                fileId=base_cv_id,
+                mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ).execute()
+            modified_docx = _apply_cv_data(docx_bytes, cv_content)
+            doc = drive.files().create(
+                body={
+                    "name": file_name,
+                    "mimeType": "application/vnd.google-apps.document",
+                    "parents": [company_folder_id],
+                },
+                media_body=MediaIoBaseUpload(
+                    io.BytesIO(modified_docx),
+                    mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ),
+                fields="id",
+            ).execute()
+            doc_id = doc["id"]
+        except Exception:
+            doc_id = None
 
-    # Clear existing content and write the tailored text
-    existing = docs.documents().get(documentId=doc_id).execute()
-    end_index = existing["body"]["content"][-1]["endIndex"] - 1
-    requests = []
-    if end_index > 1:
-        requests.append({"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index}}})
-    requests.append({"insertText": {"location": {"index": 1}, "text": cv_content}})
-    docs.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
+    if doc_id is None:
+        # Fallback: copy base CV Google Doc and replace text
+        if base_cv_id:
+            doc = drive.files().copy(
+                fileId=base_cv_id,
+                body={"name": file_name, "parents": [company_folder_id]},
+            ).execute()
+            doc_id = doc["id"]
+        else:
+            doc = docs.documents().create(body={"title": file_name}).execute()
+            doc_id = doc["documentId"]
+            drive.files().update(
+                fileId=doc_id,
+                addParents=company_folder_id,
+                removeParents="root",
+                fields="id, parents",
+            ).execute()
+        cv_text = "\n".join(
+            [cv_content.get("summary", "")] +
+            cv_content.get("admaven_bullets", []) +
+            cv_content.get("aa_financial_bullets", []) +
+            cv_content.get("adore_bullets", [])
+        ) if isinstance(cv_content, dict) else str(cv_content)
+        if cv_text.strip():
+            existing = docs.documents().get(documentId=doc_id).execute()
+            end_index = existing["body"]["content"][-1]["endIndex"] - 1
+            requests = []
+            if end_index > 1:
+                requests.append({"deleteContentRange": {"range": {"startIndex": 1, "endIndex": end_index}}})
+            requests.append({"insertText": {"location": {"index": 1}, "text": cv_text}})
+            docs.documents().batchUpdate(documentId=doc_id, body={"requests": requests}).execute()
 
     # Export as PDF and upload to the same company folder
     pdf_bytes = drive.files().export(fileId=doc_id, mimeType="application/pdf").execute()
@@ -170,7 +294,9 @@ def create_tailored_cv_doc(cv_content: str, job_info: dict) -> str:
         body={"type": "anyone", "role": "reader"},
     ).execute()
 
-    return f"https://docs.google.com/document/d/{doc_id}/edit"
+    cv_url = f"https://docs.google.com/document/d/{doc_id}/edit"
+    folder_url = f"https://drive.google.com/drive/folders/{company_folder_id}"
+    return cv_url, folder_url
 
 
 def log_to_sheet(job_info: dict, match_score: int, cv_url: str, job_url: str) -> str:

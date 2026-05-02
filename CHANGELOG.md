@@ -5,6 +5,27 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.1.0 — 2026-05-02
+
+### Changed
+- Input section redesigned: toggle replaced with two separate fields - Job URL (optional, saved to tracker) and Job Description (required, used for analysis)
+- Job URL is stored in the tracker for reference; no URL scraping happens - the pasted description is always used for analysis
+- Analyze & Tailor CV button is now full width with a lift-and-glow hover effect
+- Result cards now have consistent 18px gaps between them
+- Match rationale text changed from italic muted-grey to normal black body text
+- Progress steps now go green individually as each step completes (browser yield fix)
+- 4 CTA buttons replace the previous 3, arranged in a 2x2 grid, each with a unique color and emoji: View tailored CV (blue), Open tracker (green), View Drive (amber), Start new (purple)
+- System status card hides when the results page is shown; restores on Start new
+
+### Added
+- View Drive button links to the company's Google Drive folder for the application
+- Em dash cleanup: prompts instruct Claude not to use em dashes; JS post-processes any that slip through
+
+### Fixed
+- Missing gap between result section cards (results section now uses flex + 18px gap)
+
+---
+
 ## v2.0.0 — 2026-04-29
 
 ### Changed

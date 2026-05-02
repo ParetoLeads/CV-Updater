@@ -46,7 +46,9 @@ Return exactly this structure:
     "company_description": "brief description of the company from the posting"
 }}
 
-For ats_keywords: include every technical skill, tool, methodology, certification, and domain term that an ATS would scan for. Include both spelled-out and abbreviated forms where relevant (e.g. "Search Engine Optimization (SEO)")."""
+For ats_keywords: include every technical skill, tool, methodology, certification, and domain term that an ATS would scan for. Include both spelled-out and abbreviated forms where relevant (e.g. "Search Engine Optimization (SEO)").
+
+Writing rule: never use em dashes (—) or en dashes (–). Use a comma or regular hyphen (-) instead."""
         }]
     )
     return _parse_json(response.content[0].text)
@@ -117,7 +119,8 @@ Rules:
 - current_focus and recent_highlights: draw primarily from SOURCE 2
 - mission_values and key_themes: draw primarily from SOURCE 1
 - role_context: cross-reference SOURCE 3 with what you learned from 1 and 2
-- Never invent facts; if a source is unavailable use the other two"""
+- Never invent facts; if a source is unavailable use the other two
+- Never use em dashes (—) or en dashes (–) — use a comma or regular hyphen (-) instead"""
         }]
     )
     return _parse_json(response.content[0].text)
@@ -159,7 +162,9 @@ Return exactly this structure:
         }}
     ],
     "cv_strategy": "Overall CV tailoring strategy — what to lead with, what to emphasise, what to de-emphasise. Reference the company's current_focus and role_context to make this specific."
-}}"""
+}}
+
+Writing rule: never use em dashes (—) or en dashes (–). Use a comma or regular hyphen (-) instead."""
         }]
     )
     return _parse_json(response.content[0].text)
@@ -171,54 +176,64 @@ def tailor_cv(
     match_gaps: dict,
     tahel_profile: str,
     base_cv_text: str = "",
-) -> str:
-    """Edit the Base CV to fit a specific role, or generate from tahel_profile if base CV unavailable."""
+) -> dict:
+    """Edit the Base CV to fit a specific role. Returns structured dict with summary + bullets per company."""
     keywords = ", ".join(job_analysis.get("ats_keywords", [])[:12])
+
+    json_schema = """{
+  "summary": "<rewritten professional summary — 3-5 sentences, speaks directly to this role and company>",
+  "admaven_bullets": ["<bullet 1>", "<bullet 2>", "<bullet 3>"],
+  "aa_financial_bullets": ["<bullet 1>", "<bullet 2>"],
+  "adore_bullets": ["<bullet 1>", "<bullet 2>"]
+}"""
 
     if base_cv_text.strip():
         instruction = f"""You are an expert CV editor. Edit Tahel's existing CV to better fit this specific role.
 
+Return ONLY valid JSON — no markdown fences, no explanation:
+{json_schema}
+
 WHAT TO EDIT:
-- Rewrite the professional summary to speak directly to this role and company type
-- For each role in the CV, rewrite the bullet points to lead with the skills and outcomes that matter most for THIS specific job — read the job analysis and key requirements to decide what to emphasise
-- Weave in ATS keywords naturally where they fit — do not force them
-- Adjust the overall tone to match what the job description is asking for
+- summary: rewrite to speak directly to this role and company type
+- Bullets for each role: rewrite to lead with the skills and outcomes most relevant to THIS job
+- Weave in ATS keywords naturally — do not force them
+- Adjust tone to match what the job description asks for
+- 2-4 bullets per role
 
 WHAT NOT TO CHANGE:
-- Section order and structure — keep it exactly as it is in the base CV
-- Job titles, companies, dates, and locations — do not alter any of these
 - The facts and numbers — reframe HOW they are described, never change the actual figures
-- Never add experience that is not in the base CV or profile
+- Never add experience not in the base CV or profile
 
 ATS KEYWORDS TO WEAVE IN: {keywords}
 
 TONE AND WRITING RULES (follow without exception):
 {TONE_GUIDE}
 
-BASE CV (edit this — preserve structure, keep all facts):
+BASE CV (edit this — keep all facts):
 {base_cv_text}
 
 JOB ANALYSIS:
 {json.dumps(job_analysis, indent=2)}
 
-COMPANY CONTEXT (calibrate tone, word choice, and emphasis from this):
+COMPANY CONTEXT:
 - Current focus: {company_analysis.get('current_focus', 'N/A')}
 - Role context: {company_analysis.get('role_context', 'N/A')}
-- Key themes to weave in: {', '.join(company_analysis.get('key_themes', []))}
+- Key themes: {', '.join(company_analysis.get('key_themes', []))}
 
 TAILORING STRATEGY:
-{json.dumps(match_gaps, indent=2)}
-
-Return clean plain text only. Same section structure as the base CV. No markdown # headers, no asterisks."""
+{json.dumps(match_gaps, indent=2)}"""
     else:
         instruction = f"""You are an expert CV writer. Write Tahel's CV for this specific role.
+
+Return ONLY valid JSON — no markdown fences, no explanation:
+{json_schema}
 
 STRICT RULES:
 - Every claim must be real and traceable to her profile below — do NOT invent anything
 - Naturally weave in these ATS keywords: {keywords}
 - Use strong action verbs (Led, Grew, Built, Managed, Launched, Closed, Delivered, etc.)
 - Quantify achievements wherever the profile supports it
-- Keep content to 1–2 pages worth of text
+- 2-4 bullets per role
 
 TONE AND WRITING RULES (follow without exception):
 {TONE_GUIDE}
@@ -233,14 +248,11 @@ COMPANY ANALYSIS:
 {json.dumps(company_analysis, indent=2)}
 
 TAILORING STRATEGY:
-{json.dumps(match_gaps, indent=2)}
-
-Write the CV with these sections: PROFESSIONAL SUMMARY, CORE SKILLS, PROFESSIONAL EXPERIENCE, EDUCATION, CERTIFICATIONS & LANGUAGES.
-Return clean plain text only — no markdown headers with #, no asterisks for bold."""
+{json.dumps(match_gaps, indent=2)}"""
 
     response = client.messages.create(
         model=MODEL,
         max_tokens=4000,
         messages=[{"role": "user", "content": instruction}],
     )
-    return response.content[0].text
+    return _parse_json(response.content[0].text)

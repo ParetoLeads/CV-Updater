@@ -1,16 +1,13 @@
 // ── State ──────────────────────────────────────────────────
-let inputType = "url";
 let systemReady = false;
 
 // ── DOM refs ───────────────────────────────────────────────
-const toggleBtns     = document.querySelectorAll(".toggle-btn");
-const urlField       = document.getElementById("url-field");
-const pasteField     = document.getElementById("paste-field");
 const jobUrl         = document.getElementById("job-url");
 const jobPaste       = document.getElementById("job-paste");
 const processBtn     = document.getElementById("process-btn");
 const recheckBtn     = document.getElementById("recheck-btn");
 const statusMsg      = document.getElementById("status-msg");
+const statusCard     = document.getElementById("status-card");
 const inputCard      = document.getElementById("input-card");
 const duplicateCard  = document.getElementById("duplicate-card");
 const dupMsg         = document.getElementById("duplicate-msg");
@@ -25,10 +22,11 @@ const resultsSection = document.getElementById("results-section");
 const newBtn         = document.getElementById("new-btn");
 const cvLink         = document.getElementById("cv-link");
 const sheetLink      = document.getElementById("sheet-link");
+const driveLink      = document.getElementById("drive-link");
 
 // ── Pre-defined step order ─────────────────────────────────
 const STEPS = [
-  { id: "scraping",          label: "Extracting job description" },
+  { id: "scraping",          label: "Preparing job description" },
   { id: "analyzing",         label: "Analyzing job requirements & ATS keywords" },
   { id: "company_scrape",   label: "Researching company website and About page" },
   { id: "news",             label: "Searching recent news" },
@@ -91,35 +89,21 @@ async function runHealthCheck() {
 recheckBtn.addEventListener("click", runHealthCheck);
 runHealthCheck();
 
-// ── Toggle URL / Paste ─────────────────────────────────────
-toggleBtns.forEach(btn => {
-  btn.addEventListener("click", () => {
-    toggleBtns.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    inputType = btn.dataset.type;
-    if (inputType === "url") {
-      urlField.classList.remove("hidden");
-      pasteField.classList.add("hidden");
-    } else {
-      urlField.classList.add("hidden");
-      pasteField.classList.remove("hidden");
-    }
-  });
-});
-
 // ── Process ────────────────────────────────────────────────
 processBtn.addEventListener("click", () => processRequest(false));
 dupForceBtn.addEventListener("click", () => processRequest(true));
 
 async function processRequest(force) {
-  const content = inputType === "url" ? jobUrl.value.trim() : jobPaste.value.trim();
-  if (!content) {
-    alert(inputType === "url" ? "Please enter a job URL." : "Please paste a job description.");
+  const jobDescription = jobPaste.value.trim();
+  if (!jobDescription) {
+    alert("Please paste the job description.");
     return;
   }
+  const jobUrlValue = jobUrl.value.trim();
 
   // Switch to progress view and pre-render all steps as pending
   inputCard.classList.add("hidden");
+  statusCard.classList.add("hidden");
   duplicateCard.classList.add("hidden");
   resultsSection.classList.add("hidden");
   progressCard.classList.remove("hidden");
@@ -140,8 +124,17 @@ async function processRequest(force) {
     progressTimer.textContent = `${elapsed}s`;
   }, 1000);
 
+  function markStepDone(id) {
+    const el = document.getElementById(`step-${id}`);
+    if (el) {
+      el.classList.remove("active", "pending");
+      el.classList.add("done");
+      el.querySelector(".step-icon").textContent = "✓";
+    }
+  }
+
   function activateStep(id, message) {
-    // Mark previous active step as done
+    // Mark all currently active steps as done
     document.querySelectorAll(".step-item.active").forEach(el => {
       el.classList.remove("active");
       el.classList.add("done");
@@ -165,7 +158,6 @@ async function processRequest(force) {
   }
 
   function markStepError(id, message) {
-    // Mark active step as error
     document.querySelectorAll(".step-item.active").forEach(el => {
       el.classList.remove("active");
       el.classList.add("error");
@@ -186,7 +178,7 @@ async function processRequest(force) {
     const response = await fetch("/api/process", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ input_type: inputType, content, force }),
+      body: JSON.stringify({ job_url: jobUrlValue, job_description: jobDescription, force }),
     });
 
     if (!response.ok) throw new Error(`Server error: ${response.status}`);
@@ -213,30 +205,13 @@ async function processRequest(force) {
         if (step === "duplicate") {
           clearInterval(timerInterval);
           progressCard.classList.add("hidden");
+          statusCard.classList.remove("hidden");
+          inputCard.classList.remove("hidden");
           dupMsg.textContent = message;
           dupCvLink.href = (data && data.cv_url) ? data.cv_url : "#";
           if (!data || !data.cv_url) dupCvLink.classList.add("hidden");
           else dupCvLink.classList.remove("hidden");
           duplicateCard.classList.remove("hidden");
-          return;
-        }
-
-        if (step === "linkedin_error") {
-          clearInterval(timerInterval);
-          progressCard.classList.add("hidden");
-          inputCard.classList.remove("hidden");
-          // Switch to paste mode and show the message
-          toggleBtns.forEach(b => b.classList.remove("active"));
-          document.querySelector('.toggle-btn[data-type="paste"]').classList.add("active");
-          inputType = "paste";
-          urlField.classList.add("hidden");
-          pasteField.classList.remove("hidden");
-          jobPaste.placeholder = "Paste the LinkedIn job description here...";
-          jobPaste.focus();
-          const banner = document.createElement("p");
-          banner.className = "linkedin-banner";
-          banner.textContent = "LinkedIn requires login — paste the job description below instead.";
-          inputCard.insertBefore(banner, inputCard.querySelector(".toggle-row"));
           return;
         }
 
@@ -255,6 +230,9 @@ async function processRequest(force) {
         }
 
         activateStep(step, message);
+
+        // Yield to browser between events so each step renders green before the next starts
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
   } catch (err) {
@@ -265,7 +243,7 @@ async function processRequest(force) {
 
 // ── Render results ─────────────────────────────────────────
 function renderResults(data) {
-  const { job_analysis, company_analysis, match_gaps, cv_url, sheet_url } = data;
+  const { job_analysis, company_analysis, match_gaps, cv_url, sheet_url, folder_url } = data;
 
   // Job header
   document.getElementById("r-company").textContent = job_analysis.company_name || "";
@@ -277,18 +255,18 @@ function renderResults(data) {
   const scoreEl = document.getElementById("r-score");
   scoreEl.textContent = score;
   scoreEl.className = "result-score-num " + (score >= 70 ? "high" : score >= 50 ? "mid" : "low");
-  document.getElementById("r-rationale").textContent = match_gaps.match_rationale || "";
+  document.getElementById("r-rationale").textContent = cleanText(match_gaps.match_rationale || "");
 
   // About the company
-  document.getElementById("r-about").textContent = company_analysis.overview || "";
+  document.getElementById("r-about").textContent = cleanText(company_analysis.overview || "");
 
   // The role
-  document.getElementById("r-role").textContent = job_analysis.ideal_candidate_summary || "";
+  document.getElementById("r-role").textContent = cleanText(job_analysis.ideal_candidate_summary || "");
 
   // Key insights
   document.getElementById("r-insights").innerHTML = (company_analysis.key_talking_points || [])
     .slice(0, 3)
-    .map(i => `<li>${esc(i)}</li>`)
+    .map(i => `<li>${esc(cleanText(i))}</li>`)
     .join("");
 
   // CV gaps (hide card if none)
@@ -299,7 +277,7 @@ function renderResults(data) {
   } else {
     gapsCard.classList.remove("hidden");
     document.getElementById("r-gaps").innerHTML = gaps
-      .map(g => `<li>${esc(g.gap)}</li>`)
+      .map(g => `<li>${esc(cleanText(g.gap))}</li>`)
       .join("");
   }
 
@@ -309,9 +287,12 @@ function renderResults(data) {
     .join("");
 
   // CTAs
-  cvLink.href    = cv_url    || "#";
-  sheetLink.href = sheet_url || "#";
+  cvLink.href    = cv_url     || "#";
+  sheetLink.href = sheet_url  || "#";
+  driveLink.href = folder_url || "#";
 
+  // Hide status card, show results
+  statusCard.classList.add("hidden");
   progressCard.classList.add("hidden");
   resultsSection.classList.remove("hidden");
 }
@@ -330,9 +311,9 @@ function resetToInput() {
   progressCard.classList.add("hidden");
   duplicateCard.classList.add("hidden");
   resultsSection.classList.add("hidden");
+  statusCard.classList.remove("hidden");
   inputCard.classList.remove("hidden");
   progressCard.querySelectorAll("button.btn-ghost").forEach(el => el.remove());
-  inputCard.querySelectorAll(".linkedin-banner").forEach(el => el.remove());
 }
 
 // ── Utility ────────────────────────────────────────────────
@@ -342,4 +323,8 @@ function esc(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function cleanText(str) {
+  return String(str || "").replace(/—/g, " - ").replace(/–/g, "-");
 }

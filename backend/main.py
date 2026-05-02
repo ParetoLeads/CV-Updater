@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
-from scraper import scrape_url, scrape_company_pages, clean_pasted_text, LinkedInURLError
+from scraper import scrape_company_pages, clean_pasted_text
 from analyzer import analyze_job, build_company_analysis, calculate_match_and_gaps, tailor_cv
 from news_search import search_recent_news, find_company_url
 from google_client import create_tailored_cv_doc, log_to_sheet, check_duplicate, read_base_cv_text
@@ -26,9 +26,9 @@ TAHEL_PROFILE_PATH = Path(__file__).parent.parent / "tahel_profile.md"
 
 
 class JobRequest(BaseModel):
-    input_type: str  # "url" or "paste"
-    content: str
-    force: bool = False  # skip duplicate check
+    job_url: str = ""        # stored in tracker only — not scraped
+    job_description: str     # used for all analysis
+    force: bool = False
 
 
 def _event(step: str, message: str, data: dict = None) -> str:
@@ -47,20 +47,10 @@ async def _process_stream(req: JobRequest):
             return
         tahel_profile = TAHEL_PROFILE_PATH.read_text()
 
-        yield _event("scraping", "Extracting job description...")
-        if req.input_type == "url":
-            logger.info(f"Processing job URL: {req.content[:80]}")
-            try:
-                job_text = scrape_url(req.content)
-            except LinkedInURLError as e:
-                logger.warning(f"LinkedIn URL blocked: {req.content[:80]}")
-                yield _event("linkedin_error", str(e))
-                return
-            job_url = req.content
-        else:
-            logger.info("Processing pasted job description")
-            job_text = clean_pasted_text(req.content)
-            job_url = ""
+        yield _event("scraping", "Preparing job description...")
+        logger.info("Processing pasted job description")
+        job_text = clean_pasted_text(req.job_description)
+        job_url = req.job_url.strip()
 
         yield _event("analyzing", "Analyzing job requirements and ATS keywords...")
         job_analysis = analyze_job(job_text)
@@ -110,7 +100,7 @@ async def _process_stream(req: JobRequest):
         tailored_cv = tailor_cv(job_analysis, company_analysis, match_gaps, tahel_profile, base_cv_text)
 
         yield _event("creating", "Creating tailored Google Doc...")
-        cv_url = create_tailored_cv_doc(tailored_cv, job_analysis)
+        cv_url, folder_url = create_tailored_cv_doc(tailored_cv, job_analysis)
         logger.info(f"CV doc created: {cv_url}")
 
         yield _event("logging", "Logging to application tracker...")
@@ -129,6 +119,7 @@ async def _process_stream(req: JobRequest):
             "news": news,
             "cv_url": cv_url,
             "sheet_url": sheet_url,
+            "folder_url": folder_url,
         })
 
     except Exception as e:

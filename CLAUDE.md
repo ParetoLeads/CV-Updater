@@ -182,6 +182,15 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.1.0 — 2026-05-02
+- Input redesigned: two separate fields (Job URL for tracker, Job Description for analysis) — no URL scraping
+- `job_description` drives all analysis; `job_url` is stored in the tracker only
+- `create_tailored_cv_doc` now returns `(cv_url, folder_url)` tuple; `folder_url` passed to the complete event
+- Results section uses `display:flex; gap:18px` so cards have consistent spacing
+- 4 CTA buttons in 2x2 grid, each colored: blue/green/amber/purple with emoji
+- System status card hidden on results page, restored on reset
+- Em dashes cleaned from output: prompts + JS `cleanText()` post-processor
+
 ### v2.0.0 — 2026-04-29
 - Results page fully redesigned: single-column layout with 7 distinct cards replacing the old 3-column grid
 - Score card shows company/title/level on left, colour-coded match score on right, and italic rationale below a divider
