@@ -7,6 +7,9 @@ _No open issues._
 
 ## Resolved Issues
 
+### [#13] Summary contained filler sentences and missing professional identity — spotted v2.3.0, fixed v2.4.0
+Output passed all hard validation checks (no pronouns, no company name, word count OK) but contained sentences with no concrete information — "this record reflects consistent performance across full account lifecycles", "Partner success and account management expertise spans programmatic monetization across diverse publisher portfolios". Root cause: Stage 2 prompt gave only negative rules, leaving Claude free to fill space with vague-but-compliant filler. Second issue: no identity sentence (title + years + domain) in sentence 1, which ATS research shows is the highest-impact line. Fixed by: expanding Stage 1 to return identity/anchor/skills as a dict; rewriting Stage 2 with a 4-sentence structure guide and a voice contract banning template constructions; adding `professional_identity`, `information_density`, and `natural_voice` to the Stage 4 rubric.
+
 ### [#12] Summary generation produced third-person, over-limit, company-naming output — spotted v2.2.0, fixed v2.3.0
 Single Claude call was doing too many jobs simultaneously: pick the anchor achievement, write the summary, self-police against a dozen rules, and count words accurately. Something always slipped — third-person pronouns ("she"), company name mentioned, >70 words, soft-skill assertions. Prompt tightening failed repeatedly. Fixed by decomposing into 4 focused stages: (1) isolated anchor-fact extraction, (2) single-job summary writing, (3) Python validation + targeted Claude fix, (4) rubric-based scorer with retry loop (up to 5 attempts, threshold 7/10).
 

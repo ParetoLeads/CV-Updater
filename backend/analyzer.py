@@ -178,12 +178,12 @@ Writing rule: never use em dashes (—) or en dashes (–). Use a comma or regul
 
 # ── Summary pipeline ──────────────────────────────────────────────────────────
 
-def _extract_anchor_fact(job_analysis: dict, base_cv_text: str) -> str:
-    """Stage 1: Pick the single strongest quantified achievement from the CV for this role."""
+def _extract_ingredients(job_analysis: dict, base_cv_text: str) -> dict:
+    """Stage 1: Extract structured building materials for the summary (identity, anchor, skills)."""
     response = client.messages.create(
         model=MODEL,
-        max_tokens=100,
-        messages=[{"role": "user", "content": f"""From this CV, identify the single most relevant quantified achievement to anchor a professional summary for the role below.
+        max_tokens=200,
+        messages=[{"role": "user", "content": f"""From this CV, extract three building materials for a professional summary targeting the role below. Return ONLY valid JSON — no markdown, no explanation.
 
 ROLE: {job_analysis.get('job_title', 'Unknown')}
 KEY REQUIREMENTS: {', '.join(job_analysis.get('key_requirements', [])[:5])}
@@ -191,13 +191,20 @@ KEY REQUIREMENTS: {', '.join(job_analysis.get('key_requirements', [])[:5])}
 CV:
 {base_cv_text[:4000]}
 
-Return ONLY the anchor fact as a short phrase (10-20 words). It must contain a real number, rank, percentage, or scale directly from the CV. Example: "ranked #1 in revenue generation across a 300+ publisher portfolio for three consecutive quarters". No explanation, no full stop."""}]
+Return exactly:
+{{
+  "identity": "a short identity fragment — job title mirroring the role + total years of experience + domain (e.g. 'Senior Account Manager with 7 years in B2B sales and 3+ in programmatic AdTech'). Not a full sentence. No pronouns.",
+  "anchor": "the single strongest quantified achievement directly from the CV. Must contain a real number, rank, percentage, or scale. Example: 'ranked #1 in revenue generation across a 300+ publisher portfolio for three consecutive quarters'. 10-20 words. No full stop.",
+  "skills": "2-3 specific tools or domain capabilities most relevant to THIS role, named precisely. Example: 'HubSpot and Tableau for pipeline and performance tracking; publisher-side monetization strategy'. Not a generic list."
+}}
+
+Rules: every field must be grounded in the CV — do not invent. No em dashes."""}]
     )
-    return response.content[0].text.strip()
+    return _parse_json(response.content[0].text)
 
 
-def _write_summary(anchor_fact: str, job_analysis: dict, base_cv_text: str, prior_feedback: str = "") -> str:
-    """Stage 2: Write one summary using the pre-selected anchor fact."""
+def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, prior_feedback: str = "") -> str:
+    """Stage 2: Write one summary using pre-extracted building materials."""
     feedback_block = (
         f"\nPRIOR ATTEMPT FEEDBACK — fix these specifically:\n{prior_feedback}\n"
         if prior_feedback else ""
@@ -209,19 +216,32 @@ def _write_summary(anchor_fact: str, job_analysis: dict, base_cv_text: str, prio
         max_tokens=300,
         messages=[{"role": "user", "content": f"""Write a professional CV summary. Return ONLY the summary text, nothing else.
 
-ANCHOR FACT (use near the start, verbatim or very close): {anchor_fact}
-ROLE: {job_analysis.get('job_title', 'Unknown')}
-ATS KEYWORDS TO INCLUDE NATURALLY (pick 2-4): {keywords}
-{feedback_block}
-RULES — follow every one without exception:
-1. Implied subject only — start sentences with verbs or nouns. NEVER use "I", "She", "He", "They", or any pronoun.
-2. 60-70 words exactly. Count every word before returning.
-3. Do NOT name any company — not AdMaven, not the hiring company, not any other employer.
-4. No soft-skill claims: banned phrases include "trusted advisor", "consultative", "passionate", "results-driven", "detail-oriented", "dynamic", "motivated", "team player", "strong communicator".
-5. Anchor fact must appear in the first or second sentence.
-6. Final sentence: one specific factual positioning statement. Not a pitch, not flattery toward anyone.
+BUILDING MATERIALS — use these, don't reinvent them:
+  Identity: {ingredients.get('identity', '')}
+  Anchor achievement: {ingredients.get('anchor', '')}
+  Skills to feature: {ingredients.get('skills', '')}
 
-CV FOR CONTEXT (do not invent facts not present here):
+ROLE: {job_analysis.get('job_title', 'Unknown')}
+ATS KEYWORDS — weave in 2-3 naturally: {keywords}
+{feedback_block}
+STRUCTURE — 3 to 4 sentences, each with a specific job:
+  S1 - Who: Shape the Identity fragment above into a clean opening clause. Mirror the role title. Around 15 words.
+  S2 - Proof: Lead with the anchor achievement. Number or rank first. Around 15-20 words.
+  S3 - Capability: Use the skills above in the context of what they achieve — not just a list. Around 15 words.
+  S4 - Fit (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Around 10-15 words.
+
+VOICE — matters as much as structure:
+  - Write as a real person describes themselves. Not a corporate document.
+  - Vary sentence length — a short punchy sentence followed by a medium one reads better than four sentences the same length.
+  - Read it aloud before returning. If any sentence sounds like a template, rewrite it.
+  - Banned constructions: "Specializing in...", "Expertise spans...", "this record reflects...", "brings a wealth of...", "known for...", "with a proven...".
+  - Every sentence must earn its place. If it contains no concrete claim — no number, no named tool, no specific domain term — cut it or rewrite it.
+  - No pronouns (I/she/he/they/her/his/their). Implied subject only.
+  - Do NOT name any company — not the employer, not the hiring company.
+  - No soft-skill assertions: passionate, results-driven, detail-oriented, trusted advisor, dynamic, motivated, team player.
+  - 55-70 words total. Count carefully.
+
+CV FOR CONTEXT — do not invent facts not present here:
 {base_cv_text[:3000]}
 
 {TONE_GUIDE}"""}]
@@ -280,7 +300,7 @@ def _validate_and_fix(summary: str, company_name: str) -> str:
     return summary
 
 
-def _score_summary(summary: str, job_analysis: dict, anchor_fact: str) -> dict:
+def _score_summary(summary: str, job_analysis: dict, anchor: str) -> dict:
     """Stage 4: Score the summary 0-10 against a fixed rubric. Returns score + feedback."""
     response = client.messages.create(
         model=MODEL,
@@ -291,16 +311,16 @@ SUMMARY:
 {summary}
 
 ROLE: {job_analysis.get('job_title', '')}
-ANCHOR FACT THAT SHOULD APPEAR: {anchor_fact}
+ANCHOR ACHIEVEMENT THAT SHOULD APPEAR: {anchor}
 
 RUBRIC (score each 0-2, total 0-10):
-1. anchor_fact: Quantified achievement specific, real, and prominent? (0=missing/vague, 1=present but buried, 2=strong and leads)
-2. implied_subject: Zero pronouns (I/She/He/They/her/his/their)? Sentences start with verbs or nouns? (0=pronoun found, 2=clean)
-3. no_company_flattery: No company name, no pitch to the employer? (0=violates, 2=clean)
-4. no_soft_skills: No personality-trait claims ("trusted advisor", "consultative", "passionate", etc.)? (0=multiple violations, 1=one, 2=none)
-5. relevance: Does the framing connect her background to what THIS specific role needs? (0=generic, 1=partial, 2=specific)
+1. anchor_fact: Is the quantified achievement specific, real, and prominent? (0=missing or vague, 1=present but buried past sentence 2, 2=leads or immediately follows identity sentence)
+2. professional_identity: Does sentence 1 establish who she is — role title, experience level, domain? (0=jumps straight to achievement with no identity, 1=title or domain present but incomplete, 2=clean identity: role + years + domain)
+3. information_density: Does every sentence contain a concrete claim — a number, named tool, domain term, or specific skill? (0=one or more filler sentences with no concrete claim, 1=all sentences have claims but some are vague, 2=every sentence earns its place)
+4. no_violations: Free of pronouns, company names, and soft-skill assertions? (0=pronoun or company name present, 1=one minor soft-skill claim, 2=completely clean)
+5. natural_voice: Does it read like a real person, not a corporate template? Varied rhythm, no banned constructions ("Specializing in", "Expertise spans", "this record reflects", etc.)? (0=template feel or banned constructions present, 1=mostly natural but one stiff sentence, 2=reads naturally with varied rhythm)
 
-Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable feedback on what to fix, or Passes all criteria if score >= 7>"}}"""}]
+Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable feedback on what to fix, or 'Passes all criteria' if score >= 7>"}}"""}]
     )
     try:
         return _parse_json(response.content[0].text)
@@ -312,21 +332,22 @@ def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str) 
     """
     Generate a professional summary using a decomposed, validated, scored pipeline.
 
-    Stage 1: Extract anchor fact (focused Claude call)
-    Stage 2: Write summary using anchor fact (focused Claude call)
+    Stage 1: Extract building materials — identity fragment, anchor achievement, key skills
+    Stage 2: Write summary using those ingredients
     Stage 3: Python validate + targeted Claude fix
     Stage 4: Score against rubric (Claude) — retry Stage 2-3 up to 5 times until score >= 7
     """
-    anchor_fact = _extract_anchor_fact(job_analysis, base_cv_text)
+    ingredients = _extract_ingredients(job_analysis, base_cv_text)
+    anchor = ingredients.get("anchor", "")
 
     best_summary = ""
     best_score = -1
     prior_feedback = ""
 
     for attempt in range(5):
-        summary = _write_summary(anchor_fact, job_analysis, base_cv_text, prior_feedback)
+        summary = _write_summary(ingredients, job_analysis, base_cv_text, prior_feedback)
         summary = _validate_and_fix(summary, job_analysis.get("company_name", ""))
-        result = _score_summary(summary, job_analysis, anchor_fact)
+        result = _score_summary(summary, job_analysis, anchor)
 
         score = result.get("score", 0)
         if score > best_score:

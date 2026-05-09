@@ -5,6 +5,16 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.4.0 — 2026-05-09
+
+### Changed
+- Stage 1 `_extract_anchor_fact` renamed to `_extract_ingredients`; now returns a JSON dict with three building-material fields (`identity`, `anchor`, `skills`) instead of a single anchor phrase — gives Stage 2 richer, pre-selected inputs for all four sentences
+- Stage 2 `_write_summary` rewritten: replaces 6 negative rules with a positive 4-sentence structure guide (S1=identity, S2=proof, S3=capability, S4=fit) plus an explicit voice contract banning template constructions ("Specializing in...", "Expertise spans...", "this record reflects...", etc.)
+- Stage 4 `_score_summary` rubric overhauled: `implied_subject` + `no_company_flattery` + `no_soft_skills` collapsed into `no_violations` (Python already catches these); `relevance` replaced by two new criteria — `professional_identity` (does sentence 1 establish title/years/domain?) and `natural_voice` (does it read like a person, not a template?); `information_density` added (does every sentence contain a concrete claim?)
+- `Tone.md` Professional Summary Rules updated to match the 4-sentence structure guide
+
+---
+
 ## v2.3.0 — 2026-05-09
 
 ### Changed

@@ -196,6 +196,13 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.4.0 — 2026-05-09
+- Positive structure beats negative rules. Giving Claude 6 "don't do X" rules leaves it free to fill space with vague-but-compliant filler. A 4-sentence structure guide (S1=identity, S2=proof, S3=capability, S4=fit) with per-sentence intent removes that latitude.
+- Every sentence must earn its place. The new rubric's `information_density` criterion catches filler that passes all regex checks — sentences with no number, no named tool, no domain term.
+- Professional identity in sentence 1 matters for ATS. Jobscan data: resumes mirroring the job title are 10.6x more likely to reach interview. The old pipeline skipped identity entirely and led straight to the anchor fact.
+- Extracting richer building materials at Stage 1 (identity + anchor + skills as a dict) gives the writer a complete palette. Stage 2 no longer needs to invent what to say for each sentence.
+- Voice quality needs its own rubric criterion. `natural_voice` (0-2) catches template-sounding constructions that Python can't detect — "Specializing in...", "Expertise spans...", "this record reflects...".
+
 ### v2.3.0 — 2026-05-09
 - Prompt tightening alone cannot fix LLM self-policing failures. Asking one Claude call to simultaneously pick the right achievement, write the summary, count words, and police a dozen rules means something always slips.
 - Generator-critic pattern: decompose into focused stages (extract anchor → write → validate → score). Each Claude call has one job. Python handles what Python is reliable at (word count, regex pronoun detection, substring match).

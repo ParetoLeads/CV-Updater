@@ -62,11 +62,14 @@ These are overused, AI-sounding, or hollow. Replace with specific, concrete lang
 
 ## Professional Summary Rules
 
-- 3 to 4 sentences maximum.
-- First sentence: who she is + her clearest credential.
-- Second sentence: what she has actually done (with numbers).
-- Third sentence: what she is looking for / what she brings to this role.
-- No fluff. No adjectives that aren't backed by a fact in the profile.
+- 3 to 4 sentences. 55-70 words. No more.
+- S1: Establish professional identity — who she is, years of experience, domain. Mirror the role title where natural.
+- S2: Lead with the single strongest quantified achievement. Number or rank first.
+- S3: Name the specific tools or capabilities most relevant to this role. Not a bare list — put them in context of what they achieve.
+- S4 (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Not a pitch.
+- Every sentence must carry a concrete claim. If a sentence contains no number, named tool, or specific skill, cut it.
+- Vary sentence length. A short punchy sentence followed by a medium one reads better than four of the same length.
+- Read it aloud. If it sounds like a corporate template, rewrite it.
 
 ---
 
