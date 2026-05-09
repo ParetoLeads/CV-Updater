@@ -1,12 +1,86 @@
 # Issues Tracker
 
 ## Open Issues
-_No open issues yet._
+_No open issues._
 
 ---
 
 ## Resolved Issues
-_No resolved issues yet._
+
+### [#11] Nixpacks ignored `-r backend/requirements.txt` include — spotted v2.2.0, fixed v2.2.0
+Root `requirements.txt` used `-r backend/requirements.txt` to delegate to the backend file. Nixpacks parsed but didn't recursively follow the include, so `python-docx` (and other packages) were never installed. App crashed on startup with `ModuleNotFoundError: No module named 'docx'`. Fixed by copying the full package list directly into root `requirements.txt`.
+
+---
+
+## Resolved Issues
+
+### [#10] Output CV lost all formatting — spotted v1.3.0, fixed v1.5.0
+`create_tailored_cv_doc` was deleting all content from the copied Google Doc and inserting plain text, destroying all fonts, sizes, bold headers, and spacing. Fixed by downloading the Base CV as `.docx`, applying tailored content with python-docx (replacing only paragraph text, preserving run formatting), and uploading/converting back to Google Doc.
+
+---
+
+### [#9] JS syntax error blocked entire app — spotted v1.4.2, fixed v1.4.3
+Stray `);` on line 264 of `app.js` (leftover from when `processRequest` was an inline addEventListener callback, before it was extracted to a named function). Caused the whole JS file to fail parsing — health check never ran, status items stayed grey, submit button stayed permanently disabled.
+Fixed by changing `});` to `}` to correctly close the function declaration.
+
+---
+
+### [#8] Company page discovery unreliable — guessing common paths — spotted v1.4.0, fixed v1.4.2
+Scraper was trying hardcoded paths like `/about`, `/about-us`, `/product`, `/solutions` to find company pages.
+Broke on any site that used non-standard URL structures (e.g. `/who-we-are`, `/platform`, `/our-story`).
+Fixed by extracting internal links from the homepage's nav, header, and footer elements, then scoring them by keyword match. Falls back to common paths only if nav extraction returns nothing.
+
+---
+
+### [#7] Company URL not discovered when absent from job posting — spotted v1.3.0, fixed v1.4.1
+If the job description didn't mention the company website, the scraper had no URL to work with.
+Company analysis step would proceed with no website data, producing generic output.
+Fixed by calling Tavily with `"{company_name}" official website` to auto-discover the URL when missing.
+
+---
+
+### [#6] CV quality poor when generated from scratch — spotted v1.2.0, fixed v1.3.0
+Asking Claude to write Tahel's CV from scratch produced generic, overly polished output that didn't sound like her.
+Structure and formatting drifted from her actual Base CV, making it harder to apply directly.
+Fixed by reading the Base CV as plain text from Google Drive and passing it to Claude as the document to edit.
+Claude now rewrites bullet points and the summary, but preserves section order, job titles, dates, and facts.
+
+---
+
+### [#5] Health check was slow and expensive — live API call on every load — spotted v1.3.0, fixed v1.4.0
+`check_anthropic()` was making a real API call (`client.messages.create`) on every health check to verify connectivity.
+Added latency, consumed tokens, and could fail for transient reasons unrelated to the key being valid.
+Fixed by replacing the live call with key format validation (`starts with sk-ant-`). Fast and free.
+
+---
+
+### [#4] Python 3.9 incompatibility in `check_duplicate` — spotted v1.2.0, fixed v1.2.0
+`check_duplicate` used `dict | None` union type hint, which is only valid in Python 3.10+.
+App crashed at startup on Python 3.9 with `TypeError: unsupported operand type(s) for |`.
+Fixed by removing the return type annotation entirely.
+
+---
+
+### [#3] LinkedIn URLs caused silent failure — spotted v0.4.0, fixed v0.5.0
+Submitting a LinkedIn job URL caused the scraper to hang or return empty content (LinkedIn requires auth).
+No user-facing error — the pipeline would proceed with blank job text and produce garbage output.
+Fixed by detecting LinkedIn URLs explicitly, raising `LinkedInURLError`, and switching the UI to paste mode with a clear explanation.
+
+---
+
+### [#2] Google credentials path resolution broken — spotted v0.3.0, fixed v0.5.0
+`google_client.py` used a relative path to find `client_secrets.json` and `token.json`.
+When the server was started from the project root (via `start.sh`), the working directory was `backend/`, making the relative path resolve to the wrong location.
+Fixed by resolving all credential paths relative to the file's location (`__file__`) rather than the working directory.
+
+---
+
+### [#1] Progress screen broken on submit — spotted v0.2.0, fixed v0.4.0
+Steps were added to the DOM dynamically as events arrived from the SSE stream.
+On first click, the progress section appeared empty until the first event fired — jarring visual.
+Duplicate step name `"researching"` appeared twice because two different events used the same label.
+No elapsed timer, so users had no sense of how long the process was taking.
+Fixed by pre-rendering all 9 steps as `pending` on submit, adding a live elapsed timer, and correcting all step labels.
 
 ---
 
@@ -22,6 +96,6 @@ Description of the problem and how to reproduce it.
 
 ### Resolved Issue Format
 ```
-### [#N] Short description — spotted YYYY-MM-DD, fixed vX.X.X
+### [#N] Short description — spotted vX.X.X, fixed vX.X.X
 What the problem was and how it was resolved.
 ```

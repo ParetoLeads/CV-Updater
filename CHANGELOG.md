@@ -8,7 +8,7 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 ## v2.2.0 — 2026-05-09
 
 ### Added
-- Railway deployment support: `railway.toml` (build + start command) and root `requirements.txt` (delegates to `backend/requirements.txt` for Nixpacks)
+- Railway deployment support: `railway.toml` (build + start command) and root `requirements.txt` (full package list duplicated from `backend/requirements.txt` — Nixpacks doesn't follow `-r` includes)
 - HTTP Basic Auth middleware in `main.py` — protects all routes and static files; controlled by `APP_USERNAME` / `APP_PASSWORD` env vars; bypassed when not set (local dev unaffected)
 - Cloud Google auth path in `google_client._creds()` — reads `GOOGLE_TOKEN_JSON` env var, reconstructs credentials, auto-refreshes expired access token; returns early without touching `client_secrets.json` or browser flow
 - Cloud Google health check path in `health_check.check_google()` — validates `GOOGLE_TOKEN_JSON` env var and reports status correctly on Railway
