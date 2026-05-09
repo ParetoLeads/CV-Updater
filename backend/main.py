@@ -16,7 +16,7 @@ from starlette.responses import Response as StarletteResponse
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 from scraper import scrape_company_pages, clean_pasted_text
-from analyzer import analyze_job, build_company_analysis, calculate_match_and_gaps, tailor_cv
+from analyzer import analyze_job, build_company_analysis, calculate_match_and_gaps, tailor_cv, generate_summary
 from news_search import search_recent_news, find_company_url
 from google_client import create_tailored_cv_doc, log_to_sheet, check_duplicate, read_base_cv_text
 from health_check import run_all_checks
@@ -126,6 +126,9 @@ async def _process_stream(req: JobRequest):
         yield _event("tailoring", "Tailoring CV content...")
         base_cv_text = read_base_cv_text()
         tailored_cv = tailor_cv(job_analysis, company_analysis, match_gaps, tahel_profile, base_cv_text)
+
+        yield _event("summarising", "Generating professional summary...")
+        tailored_cv["summary"] = generate_summary(job_analysis, base_cv_text, tahel_profile)
 
         yield _event("creating", "Creating tailored Google Doc...")
         cv_url, folder_url = create_tailored_cv_doc(tailored_cv, job_analysis)

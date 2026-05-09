@@ -196,6 +196,13 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.3.0 — 2026-05-09
+- Prompt tightening alone cannot fix LLM self-policing failures. Asking one Claude call to simultaneously pick the right achievement, write the summary, count words, and police a dozen rules means something always slips.
+- Generator-critic pattern: decompose into focused stages (extract anchor → write → validate → score). Each Claude call has one job. Python handles what Python is reliable at (word count, regex pronoun detection, substring match).
+- `_validate_and_fix` catches hard violations programmatically (pronouns, company name, banned phrases, word count) and uses a single targeted fix prompt — not a full rewrite. This is faster and more reliable than asking Claude to self-correct.
+- Rubric-based scoring with retry loop: score → feedback → rewrite until threshold reached (≥7/10, max 5 attempts). The scorer's structured feedback is injected into the next write attempt — Claude knows exactly what to fix, not just "try again".
+- `tailor_cv` should return bullets only; summary runs as a separate pipeline. Combining them in one call makes the prompt too broad.
+
 ### v2.2.0 — 2026-05-09
 - Deployed to Railway (Hobby plan): `railway.toml` + root `requirements.txt` added
 - `InstalledAppFlow` browser auth can't run on a server; solution: store `token.json` contents as `GOOGLE_TOKEN_JSON` env var; `_creds()` reconstructs `Credentials.from_authorized_user_info()` and auto-refreshes. Local OAuth flow untouched.

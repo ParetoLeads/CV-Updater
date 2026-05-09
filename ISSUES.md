@@ -7,6 +7,13 @@ _No open issues._
 
 ## Resolved Issues
 
+### [#12] Summary generation produced third-person, over-limit, company-naming output — spotted v2.2.0, fixed v2.3.0
+Single Claude call was doing too many jobs simultaneously: pick the anchor achievement, write the summary, self-police against a dozen rules, and count words accurately. Something always slipped — third-person pronouns ("she"), company name mentioned, >70 words, soft-skill assertions. Prompt tightening failed repeatedly. Fixed by decomposing into 4 focused stages: (1) isolated anchor-fact extraction, (2) single-job summary writing, (3) Python validation + targeted Claude fix, (4) rubric-based scorer with retry loop (up to 5 attempts, threshold 7/10).
+
+---
+
+## Resolved Issues
+
 ### [#11] Nixpacks ignored `-r backend/requirements.txt` include — spotted v2.2.0, fixed v2.2.0
 Root `requirements.txt` used `-r backend/requirements.txt` to delegate to the backend file. Nixpacks parsed but didn't recursively follow the include, so `python-docx` (and other packages) were never installed. App crashed on startup with `ModuleNotFoundError: No module named 'docx'`. Fixed by copying the full package list directly into root `requirements.txt`.
 

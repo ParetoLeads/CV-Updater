@@ -5,6 +5,24 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.3.0 — 2026-05-09
+
+### Changed
+- Professional summary generation replaced with a 4-stage decomposed pipeline in `analyzer.py`:
+  - Stage 1 `_extract_anchor_fact`: isolated Claude call picks the single strongest quantified achievement from the base CV for this specific role (returns 10-20 word phrase only)
+  - Stage 2 `_write_summary`: isolated Claude call writes one summary using the pre-selected anchor fact; 6 strict rules, no company name passed in
+  - Stage 3 `_validate_and_fix`: Python hard-validates (word count, third-person pronouns, company name, banned phrases); one targeted Claude fix call only if violations found
+  - Stage 4 `_score_summary`: rubric-based Claude scorer (0-10, 5 criteria × 0-2 each); returns score + specific feedback
+- Retry loop: if score < 7, Stage 2-3 re-run with scorer feedback injected; up to 5 attempts; best-scoring version returned if threshold never reached
+- `tailor_cv` simplified: no longer generates the summary; returns bullets only (`admaven_bullets`, `aa_financial_bullets`, `adore_bullets`)
+- `main.py`: `generate_summary` called separately after `tailor_cv`; result merged into the dict before passing to `create_tailored_cv_doc`
+
+### Removed
+- `_trim_to_70`, `_pick_best_summary` helpers (replaced by Stage 3 Python validation)
+- `summary_candidates` JSON field and `summary_rules` block from `tailor_cv` prompt
+
+---
+
 ## v2.2.0 — 2026-05-09
 
 ### Added
