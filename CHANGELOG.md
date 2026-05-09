@@ -5,6 +5,30 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.2.0 — 2026-05-09
+
+### Added
+- Railway deployment support: `railway.toml` (build + start command) and root `requirements.txt` (delegates to `backend/requirements.txt` for Nixpacks)
+- HTTP Basic Auth middleware in `main.py` — protects all routes and static files; controlled by `APP_USERNAME` / `APP_PASSWORD` env vars; bypassed when not set (local dev unaffected)
+- Cloud Google auth path in `google_client._creds()` — reads `GOOGLE_TOKEN_JSON` env var, reconstructs credentials, auto-refreshes expired access token; returns early without touching `client_secrets.json` or browser flow
+- Cloud Google health check path in `health_check.check_google()` — validates `GOOGLE_TOKEN_JSON` env var and reports status correctly on Railway
+
+---
+
+## v2.1.2 — 2026-05-06
+
+### Changed
+- Summary generation now produces 5 distinct candidates per run; Python filters to those ≤70 words; the best survivor is selected via a second lightweight Claude call; if no candidates pass, the shortest is trimmed to fit
+- Summary rules tightened: anchor fact must be a genuine achievement (ranking, scale, revenue) — basic job duties ("tracked CTR and eCPM") are explicitly disallowed as anchors
+- `summary_candidates` replaces the single `summary` field in the JSON schema; post-processing resolves it to `summary` before returning
+
+## v2.1.1 — 2026-05-06
+
+### Changed
+- Professional summary prompt rewritten with strict, enforceable rules: 70-word hard limit; must include one quantified verifiable fact from the base CV; banned word list (results-driven, passionate, proven track record, etc.); no soft-skill assertions; no company flattery. Rules extracted into a `summary_rules` block shared by both the base-CV-edit and fallback paths.
+
+---
+
 ## v2.1.0 — 2026-05-02
 
 ### Changed

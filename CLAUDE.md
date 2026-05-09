@@ -85,8 +85,22 @@ ANTHROPIC_API_KEY=
 TAVILY_API_KEY=
 GOOGLE_OUTPUT_FOLDER_ID=    ← Drive folder ID where company subfolders are created
 GOOGLE_CV_TEMPLATE_ID=          ← optional: file ID of "Tahel Tabacznik - Base CV" (app searches by name if blank)
-GOOGLE_SHEET_ID=            ← auto-created on first run if blank
+GOOGLE_SHEET_ID=            ← auto-created on first run if blank; set explicitly on Railway (see local_config.json)
 ```
+
+## Railway Deployment (online access for Tahel)
+Additional env vars required on Railway:
+```
+GOOGLE_TOKEN_JSON=   ← full contents of token.json (paste raw JSON); replaces browser OAuth flow on server
+APP_USERNAME=        ← HTTP Basic Auth username (share with Tahel)
+APP_PASSWORD=        ← HTTP Basic Auth password (share with Tahel)
+GOOGLE_SHEET_ID=     ← must be set explicitly; local_config.json is ephemeral on Railway
+```
+Current GOOGLE_SHEET_ID value: `1-TsMoRaTQ4kpl2y94EvS1vzP4hUWoTqRow5Q2i7YthQ`
+
+Railway config files: `railway.toml` (build/start command), root `requirements.txt` (delegates to `backend/requirements.txt`)
+
+**Local dev unaffected**: `APP_USERNAME`/`APP_PASSWORD` absent → auth bypassed. `GOOGLE_TOKEN_JSON` absent → existing `token.json` + `client_secrets.json` OAuth flow used as before.
 
 ## Google API Setup (one-time)
 1. Go to console.cloud.google.com → create project "CV Updater"
@@ -181,6 +195,21 @@ This applies to every code change, no matter how small.
 ### v1.4.1 — 2026-04-25
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
+
+### v2.2.0 — 2026-05-09
+- Deployed to Railway (Hobby plan): `railway.toml` + root `requirements.txt` added
+- `InstalledAppFlow` browser auth can't run on a server; solution: store `token.json` contents as `GOOGLE_TOKEN_JSON` env var; `_creds()` reconstructs `Credentials.from_authorized_user_info()` and auto-refreshes. Local OAuth flow untouched.
+- HTTP Basic Auth via Starlette `BaseHTTPMiddleware` — only way to protect both API routes and `StaticFiles` mount. FastAPI `Depends` doesn't apply to `StaticFiles`.
+- `local_config.json` is ephemeral on Railway — always set `GOOGLE_SHEET_ID` as an explicit env var for cloud deployments
+
+### v2.1.2 — 2026-05-06
+- Summary generation now runs 5 candidates through a word-count filter (≤70 words); best survivor selected by a second Claude call; fallback trims the shortest candidate if none pass
+- Anchor rule: must be a genuine achievement (ranking, scale, revenue) — basic job duties are disallowed as anchors to prevent "trying too hard" tone
+- `_trim_to_70` and `_pick_best_summary` helpers added to `analyzer.py`
+
+### v2.1.1 — 2026-05-06
+- Professional summary rules tightened: 70-word hard max; must anchor on one quantified verifiable fact from the base CV; banned filler words list; no soft-skill assertions; no company flattery
+- `summary_rules` extracted as a named block in `tailor_cv` so both the edit path and the fallback path share identical summary instructions
 
 ### v2.1.0 — 2026-05-02
 - Input redesigned: two separate fields (Job URL for tracker, Job Description for analysis) — no URL scraping

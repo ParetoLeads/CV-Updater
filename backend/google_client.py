@@ -31,6 +31,13 @@ SHEET_HEADERS = ["Date", "Company", "Title", "Seniority", "Match Score", "Job Po
 
 
 def _creds() -> Credentials:
+    token_json_env = os.getenv("GOOGLE_TOKEN_JSON", "").strip()
+    if token_json_env:
+        creds = Credentials.from_authorized_user_info(json.loads(token_json_env), SCOPES)
+        if not creds.valid and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        return creds
+
     if not SECRETS_PATH.exists():
         raise FileNotFoundError(
             f"client_secrets.json not found at {SECRETS_PATH}. "

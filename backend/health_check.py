@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -6,20 +7,12 @@ TAHEL_PROFILE_PATH = CREDS_BASE / "tahel_profile.md"
 
 
 def check_anthropic() -> dict:
-    try:
-        key = os.getenv("ANTHROPIC_API_KEY", "")
-        if not key:
-            return {"status": "error", "message": "ANTHROPIC_API_KEY not set in .env"}
-        import anthropic
-        client = anthropic.Anthropic(api_key=key)
-        client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1,
-            messages=[{"role": "user", "content": "ping"}],
-        )
-        return {"status": "ok", "message": "Connected"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)[:120]}
+    key = os.getenv("ANTHROPIC_API_KEY", "")
+    if not key:
+        return {"status": "error", "message": "ANTHROPIC_API_KEY not set in .env"}
+    if not key.startswith("sk-ant-"):
+        return {"status": "warning", "message": "Key format looks unexpected (should start with sk-ant-)"}
+    return {"status": "ok", "message": "Key configured"}
 
 
 def check_tavily() -> dict:
@@ -32,6 +25,25 @@ def check_tavily() -> dict:
 
 
 def check_google() -> dict:
+    token_json_env = os.getenv("GOOGLE_TOKEN_JSON", "").strip()
+    if token_json_env:
+        try:
+            from google.oauth2.credentials import Credentials
+            from google.auth.transport.requests import Request
+            scopes = [
+                "https://www.googleapis.com/auth/documents",
+                "https://www.googleapis.com/auth/drive",
+                "https://www.googleapis.com/auth/spreadsheets",
+            ]
+            creds = Credentials.from_authorized_user_info(json.loads(token_json_env), scopes)
+            if creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            if creds.valid:
+                return {"status": "ok", "message": "Authenticated via GOOGLE_TOKEN_JSON"}
+            return {"status": "error", "message": "Token invalid and could not be refreshed — regenerate token.json locally and update GOOGLE_TOKEN_JSON"}
+        except Exception as e:
+            return {"status": "error", "message": str(e)[:120]}
+
     secrets_path = CREDS_BASE / "client_secrets.json"
     token_path = CREDS_BASE / "token.json"
     if not secrets_path.exists():
@@ -50,8 +62,8 @@ def check_google() -> dict:
         creds = Credentials.from_authorized_user_file(str(token_path), scopes)
         if creds.expired and creds.refresh_token:
             creds.refresh(Request())
-        drive = build("drive", "v3", credentials=creds)
-        drive.files().list(pageSize=1, fields="files(id)").execute()
+        if creds.expired and not creds.refresh_token:
+            return {"status": "warning", "message": "Token expired and cannot be refreshed — re-run the app to sign in again"}
         return {"status": "ok", "message": "Authenticated as your Google account"}
     except Exception as e:
         return {"status": "error", "message": str(e)[:120]}

@@ -1,3 +1,5 @@
+import base64
+import hmac
 import json
 import os
 from pathlib import Path
@@ -8,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response as StarletteResponse
 
 load_dotenv(Path(__file__).parent.parent / ".env")
 
@@ -20,6 +24,30 @@ from logger import logger
 
 app = FastAPI(title="CV Updater")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+class BasicAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        username = os.getenv("APP_USERNAME", "")
+        password = os.getenv("APP_PASSWORD", "")
+        if not username or not password:
+            return await call_next(request)
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Basic "):
+            try:
+                decoded = base64.b64decode(auth[6:]).decode("utf-8")
+                req_user, req_pass = decoded.split(":", 1)
+                if hmac.compare_digest(req_user, username) and hmac.compare_digest(req_pass, password):
+                    return await call_next(request)
+            except Exception:
+                pass
+        return StarletteResponse(
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="CV Updater"'},
+        )
+
+
+app.add_middleware(BasicAuthMiddleware)
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 TAHEL_PROFILE_PATH = Path(__file__).parent.parent / "tahel_profile.md"
