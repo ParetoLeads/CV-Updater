@@ -33,6 +33,7 @@ const STEPS = [
   { id: "company_analysis", label: "Building Company Analysis" },
   { id: "matching",          label: "Scoring fit & identifying CV gaps" },
   { id: "tailoring",         label: "Tailoring CV content" },
+  { id: "summarising",       label: "Generating professional summary" },
   { id: "creating",          label: "Creating tailored Google Doc" },
   { id: "logging",           label: "Logging to application tracker" },
 ];
@@ -186,6 +187,7 @@ async function processRequest(force) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
+    let completed = false;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -222,6 +224,7 @@ async function processRequest(force) {
         }
 
         if (step === "complete") {
+          completed = true;
           clearInterval(timerInterval);
           markAllDone();
           progressCurrent.textContent = `Done in ${elapsed}s`;
@@ -234,6 +237,10 @@ async function processRequest(force) {
         // Yield to browser between events so each step renders green before the next starts
         await new Promise(resolve => setTimeout(resolve, 0));
       }
+    }
+    if (!completed) {
+      clearInterval(timerInterval);
+      markStepError("", "Connection lost before the process finished. Please try again.");
     }
   } catch (err) {
     clearInterval(timerInterval);

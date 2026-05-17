@@ -5,6 +5,38 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.6.0 — 2026-05-17
+
+### Changed
+
+**Pipeline knowledge transfer (main.py + analyzer.py)**
+- `generate_summary` now receives `cv_strategy` (the tailoring strategy from gap analysis), `company_context` (overview + current_focus from company_analysis), and `tailored_bullets` (first bullet per employer from the just-written CV). The summary is no longer written blind — it knows the strategy and can echo the same language as the bullets.
+- `tailor_cv` now receives `gap_skills` as an explicit prohibition list. Previously, gaps were only embedded in the match_gaps JSON context. Now a dedicated `SKILLS SHE DOES NOT HAVE` block is injected into both the edit and fallback paths, matching the pattern already used in the summary pipeline.
+- `gap_skills` now extracted from `match_gaps` before `tailor_cv` is called (previously extracted after, so it was only available to `generate_summary`).
+
+**Summary pipeline — less rigid, better context (analyzer.py)**
+- `_write_summary`: replaced rigid S1/S2/S3/S4 sentence-slot instructions with effect-based guidance ("what the reader should know after reading"). Gives Claude the destination, not the vehicle. Structure is now a recommendation, not a prescription.
+- `_write_summary`: added one concrete few-shot example showing the desired tone and rhythm. One good example replaces half the banned-constructions list.
+- `_write_summary`: trimmed the banned constructions list to hard/specific items only. Vague stylistic rules removed from the prompt — they belong in the rubric's `natural_voice` criterion or in Python validation, not as a growing list Claude navigates around.
+- `_extract_ingredients`: max_tokens raised from 200 to 400 (previous limit may have been clipping the skills field). Identity extraction instruction tightened: now explicitly asks for total career years across all roles, not just the most recent domain tenure.
+- `_validate_and_fix`: four new Python checks added:
+  - Tool-to-outcome construction: regex for `\b(Uses|Applies|Leverages|Employs)\b.{0,40}\bto\b`
+  - Background-translates template: regex for `[Aa] background.*?translates`
+  - Gap skills: substring match against the gap_skills list
+  - Missing spaces between sentences: unconditional `re.sub(r'\.(\S)', r'. \1', summary)`
+- `generate_summary`: retry loop now requires both `score >= 7` AND `len(words) <= 70` to exit. Previously a 75-word summary could score 7/10 and ship.
+
+**Page length (google_client.py + analyzer.py)**
+- `_replace_bullets_in_doc`: new bullets are now capped at the original paragraph count before the replacement loop. Previously, if Claude returned more bullets than the original doc had, new paragraph objects were inserted and the document grew beyond one page.
+- `tailor_cv`: added per-bullet length guidance to both edit and fallback paths: "Each bullet must fit on one line — 15 to 22 words maximum."
+
+**Housekeeping**
+- `Tone.md`: updated "Professional Summary Rules" to match current (v2.5.1) structure — S1 = achievement, S2 = identity. Was reversed, creating conflicting instructions since Tone.md is injected into every `_write_summary` call.
+- `frontend/app.js`: added "Generating professional summary" step to the STEPS array (between tailoring and creating). Previously the `summarising` SSE event had no matching step element.
+- `frontend/app.js`: added end-of-stream safety net — if the stream closes without a `complete` event, the UI now shows an error instead of silently hanging in the progress state.
+
+---
+
 ## v2.5.2 — 2026-05-17
 
 ### Fixed

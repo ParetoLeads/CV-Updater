@@ -7,6 +7,24 @@ _No open issues._
 
 ## Resolved Issues
 
+### [#20] CV output over one page — spotted v2.5.2, fixed v2.6.0
+`_replace_bullets_in_doc` inserts new paragraph objects when Claude returns more bullets than the original .docx had. With "2-4 bullets per role" and no length constraint, Claude frequently returned 4 per role across 3 roles, growing the doc beyond the original page count. Fixed by capping `new_bullets` to the length of the existing bullet paragraphs in `_replace_bullets_in_doc`, and adding a 15-22 word per-bullet length constraint to `tailor_cv`.
+
+### [#19] "Summarising" SSE event had no matching frontend step — spotted v2.5.0, fixed v2.6.0
+`main.py` fires a `summarising` SSE event but the STEPS array in `app.js` had no `{ id: "summarising", ... }` entry. The step silently had no effect — the "Tailoring CV content" step stayed active during summary generation with no visual feedback. Fixed by adding the step between "tailoring" and "creating".
+
+### [#18] Stream closing without "complete" event left UI in silent hanging state — spotted v2.6.0, fixed v2.6.0
+If the server disconnected mid-run (Railway timeout, network drop), the SSE reader loop exited but no error was shown. User had no indication anything went wrong and no way forward. Fixed by tracking a `completed` flag; if the loop exits without setting it, `markStepError` is called.
+
+### [#17] Tone.md had old S1/S2 order, conflicting with v2.5.1 prompt — spotted v2.6.0, fixed v2.6.0
+Tone.md "Professional Summary Rules" said S1=identity, S2=achievement. v2.5.1 switched these in the actual writing prompt. Since Tone.md is injected at the end of every `_write_summary` call, the conflict was live and contributing to template-feel outputs. Fixed by updating Tone.md to match the current structure.
+
+### [#16] Summary pipeline wrote blind — missing cv_strategy, company context, tailored bullets — spotted v2.6.0, fixed v2.6.0
+`generate_summary` had job title, keywords, base_cv_text, role_pillars, and gap_skills — but no knowledge of the tailoring strategy, the company's current focus, or what bullets were written. The summary couldn't echo the document's own themes. Fixed by passing `cv_strategy`, `company_context`, and the first bullet per employer (`tailored_bullets`) into `generate_summary` and through to `_write_summary`.
+
+### [#15] tailor_cv had no explicit gap skill prohibition — spotted v2.5.0, fixed v2.6.0
+Gap skills were embedded in the match_gaps JSON passed as strategy context, but there was no dedicated prohibition block. Claude could interpret the gaps as "things to address" and include them anyway. Fixed by extracting gap_skills before the tailor_cv call in main.py and passing them as an explicit `SKILLS SHE DOES NOT HAVE` block, matching the pattern already used in the summary pipeline.
+
 ### [#14] Summary hallucinated Salesforce despite gap analysis identifying it as missing — spotted v2.5.0, fixed v2.5.2
 Gap analysis correctly flagged Salesforce as a skill Tahel doesn't have. Summary still claimed "Salesforce-driven pipeline forecasting" because `generate_summary` received ATS keywords (which included Salesforce from the JD) with no knowledge of the gap list. Fixed by extracting gap skill names from `match_gaps.gaps` in `main.py` and passing them as a prohibition block to Stage 1 (`_extract_ingredients`) and Stage 2 (`_write_summary`) of the summary pipeline.
 

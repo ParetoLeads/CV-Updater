@@ -195,7 +195,7 @@ def _extract_ingredients(job_analysis: dict, base_cv_text: str, gap_skills: list
     )
     response = client.messages.create(
         model=MODEL,
-        max_tokens=200,
+        max_tokens=400,
         messages=[{"role": "user", "content": f"""From this CV, extract three building materials for a professional summary targeting the role below. Return ONLY valid JSON — no markdown, no explanation.
 
 ROLE: {job_analysis.get('job_title', 'Unknown')}
@@ -206,7 +206,7 @@ CV:
 
 Return exactly:
 {{
-  "identity": "a short identity fragment — job title mirroring the role + total years of experience + domain (e.g. 'Senior Account Manager with 7 years in B2B sales and 3+ in programmatic AdTech'). Not a full sentence. No pronouns.",
+  "identity": "a short identity fragment — job title mirroring the role + TOTAL career years across ALL roles in the CV (use the span from earliest to most recent role, not just the most recent domain) + domain (e.g. 'Senior Account Manager with 7 years in B2B sales and 3+ in programmatic AdTech'). Not a full sentence. No pronouns.",
   "anchor": "the single strongest quantified achievement directly from the CV. Must contain a real number, rank, percentage, or scale. Example: 'ranked #1 in revenue generation across a 300+ publisher portfolio for three consecutive quarters'. 10-20 words. No full stop.",
   "skills": "2-3 specific tools or domain capabilities most relevant to THIS role, named precisely. Example: 'HubSpot and Tableau for pipeline and performance tracking; publisher-side monetization strategy'. Not a generic list."
 }}
@@ -216,7 +216,7 @@ Rules: every field must be grounded in the CV — do not invent. No em dashes.""
     return _parse_json(response.content[0].text)
 
 
-def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, prior_feedback: str = "", role_pillars: list = None, gap_skills: list = None) -> str:
+def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, prior_feedback: str = "", role_pillars: list = None, gap_skills: list = None, cv_strategy: str = "", company_context: str = "", tailored_bullets: dict = None) -> str:
     """Stage 2: Write one summary using pre-extracted building materials."""
     feedback_block = (
         f"\nPRIOR ATTEMPT FEEDBACK — fix these specifically:\n{prior_feedback}\n"
@@ -224,17 +224,34 @@ def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, pri
     )
     keywords = ", ".join(job_analysis.get("ats_keywords", [])[:6])
     pillars_block = (
-        "\nROLE PILLARS — shape S3 and S4 around these specific themes:\n"
+        "\nROLE PILLARS — the 2-3 themes this role is fundamentally about:\n"
         + "\n".join(f"  - {p}" for p in role_pillars)
         + "\n"
         if role_pillars else ""
     )
     gap_block = (
-        "\nSKILLS/TOOLS SHE DOES NOT HAVE — do NOT claim any of these, even if they appear in the ATS keywords:\n"
+        "\nSKILLS/TOOLS SHE DOES NOT HAVE — do NOT claim any of these, even if they appear in ATS keywords:\n"
         + "\n".join(f"  - {g}" for g in gap_skills)
         + "\n"
         if gap_skills else ""
     )
+    strategy_block = (
+        f"\nTAILORING FOCUS — the CV strategy for this role (let this guide what to emphasise):\n{cv_strategy}\n"
+        if cv_strategy else ""
+    )
+    context_block = (
+        f"\nCOMPANY CONTEXT — use this to inform the fit sentence if relevant:\n{company_context}\n"
+        if company_context else ""
+    )
+    bullets_block = ""
+    if tailored_bullets:
+        previews = []
+        for key in ("admaven_bullets", "aa_financial_bullets", "adore_bullets"):
+            bullets = tailored_bullets.get(key, [])
+            if bullets:
+                previews.append(f"  - {bullets[0]}")
+        if previews:
+            bullets_block = "\nKEY THEMES IN THE TAILORED BULLETS — echo their language and framing in S3/S4:\n" + "\n".join(previews) + "\n"
 
     response = client.messages.create(
         model=MODEL,
@@ -247,24 +264,24 @@ BUILDING MATERIALS — use these, don't reinvent them:
   Skills to feature: {ingredients.get('skills', '')}
 
 ROLE: {job_analysis.get('job_title', 'Unknown')}
-{gap_block}ATS KEYWORDS — weave in 2-3 naturally (only if they reflect real experience): {keywords}
-{pillars_block}{feedback_block}
-STRUCTURE — 3 to 4 sentences, each with a specific job:
-  S1 - Hook: Open with the anchor achievement — number or rank first, stated with confidence. Past employers may be named (e.g. "at AdMaven"). Do NOT name the hiring company. Around 15-20 words.
-  S2 - Context: Establish who she is — role title, years of experience, domain — in a way that makes S1 make sense. Around 15 words.
-  S3 - Edge: Name what makes her distinctly effective in this type of role — a combination, a behaviour, or an approach that isn't obvious from S1+S2. Feel like a pitch, not a tool inventory. Do NOT use "Uses [tool] to [outcome]" or "Leverages [tool] to [outcome]". Around 15 words.
-  S4 - Fit (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Reference the role pillars if provided. Around 10-15 words.
+{gap_block}ATS KEYWORDS — weave in 1-2 naturally (only if they reflect real experience): {keywords}
+{pillars_block}{strategy_block}{context_block}{bullets_block}{feedback_block}
+WHAT THE READER SHOULD KNOW AFTER READING:
+  1. One specific thing she achieved, at scale — lead with this. Number first. Confident, not boastful. Past employer may be named (e.g. "at AdMaven"). Do NOT name the hiring company.
+  2. Who she is: title, years of experience, domain.
+  3. What makes her distinctly effective in this type of role — a combination, a behaviour, an approach. Not a list of tools.
+  4. Why her background is a natural fit here — only if you can say it in one clean sentence, not a template.
 
-VOICE — matters as much as structure:
-  - Write as a confident professional talking about themselves — not a corporate document.
-  - S1 should land like a fact, not a boast. Lead with the number. Let the achievement speak.
-  - Vary sentence length — a short punchy S1 followed by a medium S2 reads better than four sentences the same length.
-  - Read it aloud before returning. If any sentence sounds like a template, rewrite it.
-  - Banned constructions: "Specializing in...", "Expertise spans...", "this record reflects...", "brings a wealth of...", "known for...", "with a proven...", "Uses [tool] to...", "Leverages [tool] to...".
-  - Every sentence must earn its place. If it contains no concrete claim — no number, no named tool, no specific domain term — cut it or rewrite it.
+Write 3 to 4 sentences. Start with the accomplishment. Structure the rest however flows naturally.
+
+EXAMPLE — the tone and rhythm to aim for (not the exact words):
+"Ranked #1 in revenue generation across 300+ publisher accounts for three consecutive quarters at AdMaven. Senior Account Manager with 7 years in B2B sales, including 3+ in programmatic AdTech. Builds publisher revenue through Tableau-driven traffic analysis and hands-on account strategy, not just relationship management. High-volume B2C sales background brings the conversion instinct and persistence that enterprise account growth needs."
+
+HARD RULES:
   - No pronouns (I/she/he/they/her/his/their). Implied subject only.
-  - Do NOT name the hiring company anywhere in the summary.
+  - Do NOT name the hiring company. Past employer names (e.g. AdMaven) are fine.
   - No soft-skill assertions: passionate, results-driven, detail-oriented, trusted advisor, dynamic, motivated, team player.
+  - Banned phrases: "Specializing in...", "Expertise spans...", "this record reflects...", "brings a wealth of...".
   - 55-70 words total. Count carefully.
 
 CV FOR CONTEXT — do not invent facts not present here:
@@ -275,9 +292,12 @@ CV FOR CONTEXT — do not invent facts not present here:
     return response.content[0].text.strip()
 
 
-def _validate_and_fix(summary: str, company_name: str) -> str:
+def _validate_and_fix(summary: str, company_name: str, gap_skills: list = None) -> str:
     """Stage 3: Python-validate for hard violations; one targeted Claude fix if needed."""
-    # Hard-truncate word count first
+    # Fix missing spaces between sentences unconditionally
+    summary = re.sub(r'\.(\S)', r'. \1', summary)
+
+    # Hard-truncate word count
     words = summary.split()
     if len(words) > 70:
         truncated = ' '.join(words[:70])
@@ -295,6 +315,18 @@ def _validate_and_fix(summary: str, company_name: str) -> str:
     if company_name and company_name.lower() in summary.lower():
         issues.append(f"Remove all mentions of '{company_name}'. Do not name any company.")
 
+    if re.search(r'\b(Uses|Applies|Leverages|Employs)\b.{0,40}\bto\b', summary, re.IGNORECASE):
+        issues.append(
+            "Remove any sentence structured as '[Tool/verb] [tool name] to [outcome]'. "
+            "Rewrite to describe what she does and achieves, not a tool she uses."
+        )
+
+    if re.search(r'[Aa] background.*?translates', summary):
+        issues.append(
+            "Remove the phrase 'A background in X translates...' — it is a banned template construction. "
+            "Rewrite to make the same point in more direct, natural language."
+        )
+
     banned = [
         "results-driven", "proven track record", "passionate", "dedicated",
         "dynamic", "motivated", "trusted advisor", "consultative", "detail-oriented",
@@ -303,6 +335,11 @@ def _validate_and_fix(summary: str, company_name: str) -> str:
     for phrase in banned:
         if phrase.lower() in summary.lower():
             issues.append(f"Remove the phrase '{phrase}' — it is a banned soft-skill assertion.")
+
+    if gap_skills:
+        for skill in gap_skills:
+            if skill and skill.lower() in summary.lower():
+                issues.append(f"Remove mention of '{skill}' — she does not have this skill or experience.")
 
     if issues:
         fix_prompt = (
@@ -354,7 +391,7 @@ Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable fee
         return {"score": 0, "feedback": "Scoring failed — retrying."}
 
 
-def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, role_pillars: list = None, gap_skills: list = None) -> str:
+def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, role_pillars: list = None, gap_skills: list = None, cv_strategy: str = "", company_context: str = "", tailored_bullets: dict = None) -> str:
     """
     Generate a professional summary using a decomposed, validated, scored pipeline.
 
@@ -371,8 +408,11 @@ def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, 
     prior_feedback = ""
 
     for attempt in range(5):
-        summary = _write_summary(ingredients, job_analysis, base_cv_text, prior_feedback, role_pillars, gap_skills)
-        summary = _validate_and_fix(summary, job_analysis.get("company_name", ""))
+        summary = _write_summary(
+            ingredients, job_analysis, base_cv_text, prior_feedback,
+            role_pillars, gap_skills, cv_strategy, company_context, tailored_bullets,
+        )
+        summary = _validate_and_fix(summary, job_analysis.get("company_name", ""), gap_skills)
         result = _score_summary(summary, job_analysis, anchor)
 
         score = result.get("score", 0)
@@ -380,7 +420,7 @@ def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, 
             best_score = score
             best_summary = summary
 
-        if score >= 7:
+        if score >= 7 and len(summary.split()) <= 70:
             break
 
         prior_feedback = result.get("feedback", "")
@@ -396,6 +436,7 @@ def tailor_cv(
     match_gaps: dict,
     tahel_profile: str,
     base_cv_text: str = "",
+    gap_skills: list = None,
 ) -> dict:
     """Edit the Base CV bullets to fit a specific role. Returns dict with bullets per employer.
     Summary is generated separately via generate_summary()."""
@@ -404,6 +445,12 @@ def tailor_cv(
     secondary_keywords = ", ".join(ats_keywords[4:10])
     role_pillars = match_gaps.get("role_pillars", [])
     role_pillars_formatted = "\n".join(f"- {p}" for p in role_pillars) if role_pillars else ""
+    gap_prohibition = (
+        "\nSKILLS SHE DOES NOT HAVE — do not include these in bullets, even if they appear in ATS keywords:\n"
+        + "\n".join(f"- {g}" for g in gap_skills)
+        + "\n"
+        if gap_skills else ""
+    )
 
     json_schema = """{
   "admaven_bullets": ["<bullet 1>", "<bullet 2>", "<bullet 3>"],
@@ -427,11 +474,12 @@ WHAT TO EDIT:
 - Rewrite bullets using the language and priorities of this specific role
 - Adjust tone to match what the job description asks for
 - 2-4 bullets per role
+- Each bullet must fit on one line — 15 to 22 words maximum. Tight and specific.
 
 WHAT NOT TO CHANGE:
 - The facts and numbers — reframe HOW they are described, never change the actual figures
 - Never add experience not in the base CV or profile
-
+{gap_prohibition}
 ATS KEYWORD PLACEMENT RULES:
 Priority keywords (must appear — at least one per role section, ideally in the first bullet):
 {priority_keywords}
@@ -470,7 +518,8 @@ RULES FOR BULLETS:
 - Use strong action verbs (Led, Grew, Built, Managed, Launched, Closed, Delivered, etc.)
 - Quantify achievements wherever the profile supports it
 - 2-4 bullets per role
-
+- Each bullet must fit on one line — 15 to 22 words maximum. Tight and specific.
+{gap_prohibition}
 ATS KEYWORD PLACEMENT RULES:
 Priority keywords (must appear — at least one per role section, ideally in the first bullet):
 {priority_keywords}

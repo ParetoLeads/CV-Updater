@@ -63,10 +63,10 @@ These are overused, AI-sounding, or hollow. Replace with specific, concrete lang
 ## Professional Summary Rules
 
 - 3 to 4 sentences. 55-70 words. No more.
-- S1: Establish professional identity — who she is, years of experience, domain. Mirror the role title where natural.
-- S2: Lead with the single strongest quantified achievement. Number or rank first.
-- S3: Name the specific tools or capabilities most relevant to this role. Not a bare list — put them in context of what they achieve.
-- S4 (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Not a pitch.
+- S1: Lead with the single strongest quantified achievement. Number or rank first. Past employer may be named (e.g. "at AdMaven"). Do NOT name the hiring company.
+- S2: Establish professional identity — who she is, total years of experience, domain. Mirror the role title where natural.
+- S3: Name what makes her distinctly effective in this type of role — a combination, a behaviour, an approach. Feel like a pitch, not a tool inventory.
+- S4 (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Specific, not a template.
 - Every sentence must carry a concrete claim. If a sentence contains no number, named tool, or specific skill, cut it.
 - Vary sentence length. A short punchy sentence followed by a medium one reads better than four of the same length.
 - Read it aloud. If it sounds like a corporate template, rewrite it.

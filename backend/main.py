@@ -125,12 +125,22 @@ async def _process_stream(req: JobRequest):
 
         yield _event("tailoring", "Tailoring CV content...")
         base_cv_text = read_base_cv_text()
-        tailored_cv = tailor_cv(job_analysis, company_analysis, match_gaps, tahel_profile, base_cv_text)
-
-        yield _event("summarising", "Generating professional summary...")
         role_pillars = match_gaps.get("role_pillars", [])
         gap_skills = [g.get("gap", "") for g in match_gaps.get("gaps", []) if g.get("gap")]
-        tailored_cv["summary"] = generate_summary(job_analysis, base_cv_text, tahel_profile, role_pillars, gap_skills)
+        tailored_cv = tailor_cv(job_analysis, company_analysis, match_gaps, tahel_profile, base_cv_text, gap_skills=gap_skills)
+
+        yield _event("summarising", "Generating professional summary...")
+        cv_strategy = match_gaps.get("cv_strategy", "")
+        company_context = " ".join(filter(None, [
+            company_analysis.get("overview", ""),
+            company_analysis.get("current_focus", ""),
+        ])).strip()
+        tailored_cv["summary"] = generate_summary(
+            job_analysis, base_cv_text, tahel_profile, role_pillars, gap_skills,
+            cv_strategy=cv_strategy,
+            company_context=company_context,
+            tailored_bullets=tailored_cv,
+        )
 
         yield _event("creating", "Creating tailored Google Doc...")
         cv_url, folder_url = create_tailored_cv_doc(tailored_cv, job_analysis)

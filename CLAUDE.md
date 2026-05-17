@@ -196,6 +196,14 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.6.0 — 2026-05-17
+- The summary pipeline was writing blind. `generate_summary` had the fewest inputs of any stage but the most constraints. Adding cv_strategy, company_context, and the first bullet per employer gave Claude the context to write a document-coherent summary rather than a generic one derived only from keywords.
+- More rules don't fix template-sounding output — better context and a single good example do. Replacing rigid S1/S2/S3/S4 slot instructions with effect-based guidance ("what the reader should know") and adding one concrete example produced more natural results than growing the banned-constructions list had.
+- Python validation is reliable for hard structural violations (pronouns, company name, regex patterns). Soft stylistic enforcement belongs in the writing example, not a growing banned-phrases list.
+- Page overflow is caused by `_replace_bullets_in_doc` inserting new paragraph objects, not by content length. Capping `new_bullets` to the original count is a one-line fix. A 15-22 word per-bullet constraint prevents line overflow within each slot.
+- Tone.md is injected into multiple prompts. Old S1/S2 order in Tone.md created silent contradictions. Keep Tone.md in sync with the current pipeline structure after every summary architecture change.
+- gap_skills must be a dedicated prohibition block in both tailor_cv and the summary pipeline. Embedding them only in the match_gaps JSON is soft context, not a hard constraint.
+
 ### v2.5.2 — 2026-05-17
 - Gap data must be wired into the summary pipeline, not just the bullets. The gap analysis runs before the summary but was never connected to it. Result: Claude saw "Salesforce" in the ATS keywords and invented its use. Fix: pass gap skill names as an explicit blacklist to Stage 1 (ingredients) and Stage 2 (write).
 - Banning a construction by name is more reliable than describing it abstractly. Adding "Uses [tool] to [outcome]" to the banned list catches it; telling Claude to "not sound like a tool inventory" does not.

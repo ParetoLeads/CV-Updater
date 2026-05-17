@@ -167,6 +167,7 @@ def _replace_bullets_in_doc(doc, company_marker: str, new_bullets: list) -> None
         bullet_paras.append(paras[i])
     if not bullet_paras:
         return
+    new_bullets = new_bullets[:len(bullet_paras)]  # never grow the doc beyond original layout
     n_cur, n_new = len(bullet_paras), len(new_bullets)
     for i in range(min(n_cur, n_new)):
         _set_para_text(bullet_paras[i], new_bullets[i])
