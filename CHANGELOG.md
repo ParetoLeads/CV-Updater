@@ -5,6 +5,15 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.6.1 — 2026-05-18
+
+### Changed
+- `_extract_ingredients`: renamed `skills` field to `commercial_edge`; updated extraction to ask for commercial capabilities and market-specific strengths rather than tool names. For AM/AE roles, what matters is what she can DO as a salesperson, not what tools she uses.
+- `_write_summary`: replaced generic "WHAT THE READER SHOULD KNOW" numbered list with an AM/AE-specific mandate — recruiter is scanning for commercial proof, sales depth, and stakeholder range. Goal reframed as "the recruiter should want to pick up the phone." Changed from "3-4 sentences" to "2-4 sentences, no rigid structure." Updated example to show commercial confidence and relationship depth (stakeholder range from engineers to C-suite) rather than tool-focused capability.
+- `_score_summary`: updated `information_density` criterion to include commercial signals (quota, expansion, retention, stakeholder relationships) as valid evidence alongside numbers and tools. Added role-type note: analytics/operations language should score lower for AM/AE roles even if technically clean.
+
+---
+
 ## v2.6.0 — 2026-05-17
 
 ### Changed

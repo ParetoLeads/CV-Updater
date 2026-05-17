@@ -196,6 +196,12 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.6.1 — 2026-05-18
+- For AM/AE/partnerships roles, the summary ingredient extraction should surface commercial capabilities ("farming and growing Digital Native accounts"), not tools ("HubSpot and Tableau"). The tool list reads like an ops profile; the commercial capability reads like a salesperson. Renamed `skills` → `commercial_edge` in `_extract_ingredients` to enforce this.
+- The writing mandate must be role-type-aware. A generic "what the reader should know" prompt produces structured but generic outputs. An AM/AE-specific mandate ("the recruiter should want to pick up the phone") produces commercial confidence and relationship depth.
+- The rubric must reward commercial signals for AM/AE roles. Quota, expansion, retention, stakeholder range — these are the concrete claims that matter for sales roles. A summary can score 8/10 on the old rubric while reading like an analytics brief. Updated `information_density` to count commercial claims and added a role-type note to the scorer.
+- Research-backed insight: the top-10% AM/AE summaries show dual-track impact (revenue + retention), stakeholder range (engineers to C-suite), and a methodology or approach callout — not a tool list.
+
 ### v2.6.0 — 2026-05-17
 - The summary pipeline was writing blind. `generate_summary` had the fewest inputs of any stage but the most constraints. Adding cv_strategy, company_context, and the first bullet per employer gave Claude the context to write a document-coherent summary rather than a generic one derived only from keywords.
 - More rules don't fix template-sounding output — better context and a single good example do. Replacing rigid S1/S2/S3/S4 slot instructions with effect-based guidance ("what the reader should know") and adding one concrete example produced more natural results than growing the banned-constructions list had.

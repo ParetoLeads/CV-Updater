@@ -7,6 +7,11 @@ _No open issues._
 
 ## Resolved Issues
 
+### [#21] Summary reads like an analytics brief for AM/AE roles — spotted v2.6.0, fixed v2.6.1
+The pipeline produced clean, structured summaries but they didn't read like a confident salesperson introducing themselves. The `skills` ingredient extracted tool names (HubSpot, Tableau) rather than commercial capabilities. The writing mandate was generic ("what the reader should know") rather than sales-role-specific. The rubric had no commercial signal criterion, so a technically clean but commercially flat summary could score 8/10 and ship. Fixed by: renaming `skills` → `commercial_edge` with a new mandate to extract what she can DO as a salesperson; rewriting the `_write_summary` prompt with an AM/AE-specific goal (recruiter should want to pick up the phone) and a new example showing commercial scope and stakeholder range; updating the rubric to treat commercial claims as valid evidence and penalise analytics-brief tone for AM/AE roles.
+
+---
+
 ### [#20] CV output over one page — spotted v2.5.2, fixed v2.6.0
 `_replace_bullets_in_doc` inserts new paragraph objects when Claude returns more bullets than the original .docx had. With "2-4 bullets per role" and no length constraint, Claude frequently returned 4 per role across 3 roles, growing the doc beyond the original page count. Fixed by capping `new_bullets` to the length of the existing bullet paragraphs in `_replace_bullets_in_doc`, and adding a 15-22 word per-bullet length constraint to `tailor_cv`.
 

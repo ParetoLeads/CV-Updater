@@ -208,7 +208,7 @@ Return exactly:
 {{
   "identity": "a short identity fragment — job title mirroring the role + TOTAL career years across ALL roles in the CV (use the span from earliest to most recent role, not just the most recent domain) + domain (e.g. 'Senior Account Manager with 7 years in B2B sales and 3+ in programmatic AdTech'). Not a full sentence. No pronouns.",
   "anchor": "the single strongest quantified achievement directly from the CV. Must contain a real number, rank, percentage, or scale. Example: 'ranked #1 in revenue generation across a 300+ publisher portfolio for three consecutive quarters'. 10-20 words. No full stop.",
-  "skills": "2-3 specific tools or domain capabilities most relevant to THIS role, named precisely. Example: 'HubSpot and Tableau for pipeline and performance tracking; publisher-side monetization strategy'. Not a generic list."
+  "commercial_edge": "2-3 commercial capabilities, proven sales approaches, or market-specific strengths most relevant to THIS role. Focus on WHAT SHE CAN DO as a salesperson — not what tools she uses. Example: 'farming and growing Digital Native publisher accounts in Israel; full-cycle account management from onboarding to executive expansion'. Ground every claim in actual experience from the CV."
 }}
 
 Rules: every field must be grounded in the CV — do not invent. No em dashes."""}]
@@ -261,21 +261,25 @@ def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, pri
 BUILDING MATERIALS — use these, don't reinvent them:
   Identity: {ingredients.get('identity', '')}
   Anchor achievement: {ingredients.get('anchor', '')}
-  Skills to feature: {ingredients.get('skills', '')}
+  Commercial edge: {ingredients.get('commercial_edge', '')}
 
 ROLE: {job_analysis.get('job_title', 'Unknown')}
-{gap_block}ATS KEYWORDS — weave in 1-2 naturally (only if they reflect real experience): {keywords}
+{gap_block}ATS KEYWORDS — weave in 2-3 naturally where they reflect real experience: {keywords}
 {pillars_block}{strategy_block}{context_block}{bullets_block}{feedback_block}
-WHAT THE READER SHOULD KNOW AFTER READING:
-  1. One specific thing she achieved, at scale — lead with this. Number first. Confident, not boastful. Past employer may be named (e.g. "at AdMaven"). Do NOT name the hiring company.
-  2. Who she is: title, years of experience, domain.
-  3. What makes her distinctly effective in this type of role — a combination, a behaviour, an approach. Not a list of tools.
-  4. Why her background is a natural fit here — only if you can say it in one clean sentence, not a template.
+THIS IS AN ACCOUNT MANAGEMENT / SALES ROLE.
+The recruiter is scanning for:
+  - Commercial proof: quota, rankings, revenue — evidence she wins
+  - Sales depth: farming, expansion, retention — evidence she grows what she owns
+  - Stakeholder range: technical buyers through C-suite — evidence she operates at every level
 
-Write 3 to 4 sentences. Start with the accomplishment. Structure the rest however flows naturally.
+Write this like a confident top-performer introducing themselves. The recruiter should finish reading and want to pick up the phone.
 
-EXAMPLE — the tone and rhythm to aim for (not the exact words):
-"Ranked #1 in revenue generation across 300+ publisher accounts for three consecutive quarters at AdMaven. Senior Account Manager with 7 years in B2B sales, including 3+ in programmatic AdTech. Builds publisher revenue through Tableau-driven traffic analysis and hands-on account strategy, not just relationship management. High-volume B2C sales background brings the conversion instinct and persistence that enterprise account growth needs."
+Lead with her commercial proof point. From there, show what makes her effective as an AM — her sales instinct, domain edge, relationship approach. Use the role pillars, company context, and tailoring focus to make this specific to THIS opportunity.
+
+2-4 sentences. No rigid structure — let the content drive the shape. Start with the accomplishment. Past employer may be named (e.g. "at AdMaven"). Do NOT name the hiring company.
+
+EXAMPLE — the tone, confidence, and specificity to aim for (not the words):
+"Ranked #1 in revenue generation at AdMaven for three consecutive quarters, managing 300+ Israeli Digital Native publisher accounts from onboarding through strategic expansion. Seven years in B2B sales, including 3+ growing programmatic AdTech accounts — building the kind of trust that turns a first deal into a long-term growth partnership. Fluent in both the technical and commercial conversation: CPM optimization with engineers, growth roadmaps with executives."
 
 HARD RULES:
   - No pronouns (I/she/he/they/her/his/their). Implied subject only.
@@ -379,9 +383,11 @@ ANCHOR ACHIEVEMENT THAT SHOULD APPEAR: {anchor}
 RUBRIC (score each 0-2, total 0-10):
 1. anchor_fact: Does the quantified achievement open the summary as sentence 1, stated confidently with the number or rank first? (0=missing or vague, 1=present but not leading — buried in sentence 2 or later, 2=leads as sentence 1 with the number first)
 2. professional_identity: Does the summary establish who she is — role title, experience level, domain — by sentence 2 at the latest? (0=identity never appears, 1=title or domain present but incomplete, 2=clean identity: role + years + domain, appears in sentence 1 or 2)
-3. information_density: Does every sentence contain a concrete claim — a number, named tool, domain term, or specific skill? (0=one or more filler sentences with no concrete claim, 1=all sentences have claims but some are vague, 2=every sentence earns its place)
+3. information_density: Does every sentence contain a concrete claim — a number, named tool, domain term, commercial signal (quota/revenue/expansion/retention/stakeholder relationships), or specific skill? For AM/AE roles, commercial claims count as highly as numbers. (0=one or more sentences with no concrete claim, 1=all sentences have claims but some are vague, 2=every sentence earns its place)
 4. no_violations: Free of pronouns, the hiring company name, and soft-skill assertions? Past employer names (e.g. AdMaven) are allowed. (0=pronoun or hiring company name present, 1=one minor soft-skill claim, 2=completely clean)
 5. natural_voice: Does it read like a confident professional, not a corporate template? Varied rhythm, no banned constructions ("Specializing in", "Expertise spans", "this record reflects", "Uses [tool] to [outcome]", "Leverages [tool] to [outcome]", etc.)? (0=template feel or banned constructions present, 1=mostly natural but one stiff sentence, 2=reads naturally with varied rhythm)
+
+ROLE TYPE NOTE: This is an AM/AE/partnerships role. A strong summary demonstrates COMMERCIAL capability — evidence of winning, farming, expanding, and building relationships at multiple stakeholder levels. A summary that reads like an operations or analytics brief should score lower on information_density and natural_voice, even if it is technically clean.
 
 Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable feedback on what to fix, or 'Passes all criteria' if score >= 7>"}}"""}]
     )
