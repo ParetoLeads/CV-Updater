@@ -167,10 +167,17 @@ Return exactly this structure:
             "suggestion": "How to address or minimise this gap in the CV"
         }}
     ],
-    "cv_strategy": "Overall CV tailoring strategy — what to lead with, what to emphasise, what to de-emphasise. Reference the company's current_focus and role_context to make this specific."
+    "cv_strategy": "Overall CV tailoring strategy — what to lead with, what to emphasise, what to de-emphasise. Reference the company's current_focus and role_context to make this specific.",
+    "role_pillars": [
+        "2-3 short phrases (5-8 words each) describing what this specific role is fundamentally about",
+        "Derived from THIS JD — not a fixed category. Examples: 'pipeline reporting and forecasting', 'CRM process optimisation', 'cross-team revenue alignment', 'programmatic ad operations at scale'",
+        "Optional third pillar if the role clearly has one"
+    ]
 }}
 
-Writing rule: never use em dashes (—) or en dashes (–). Use a comma or regular hyphen (-) instead."""
+Rules:
+- role_pillars: return exactly 2-3 items. Each must be a concrete, JD-specific phrase — not generic labels like 'sales' or 'marketing'.
+- Writing rule: never use em dashes (—) or en dashes (–). Use a comma or regular hyphen (-) instead."""
         }]
     )
     return _parse_json(response.content[0].text)
@@ -203,13 +210,19 @@ Rules: every field must be grounded in the CV — do not invent. No em dashes.""
     return _parse_json(response.content[0].text)
 
 
-def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, prior_feedback: str = "") -> str:
+def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, prior_feedback: str = "", role_pillars: list = None) -> str:
     """Stage 2: Write one summary using pre-extracted building materials."""
     feedback_block = (
         f"\nPRIOR ATTEMPT FEEDBACK — fix these specifically:\n{prior_feedback}\n"
         if prior_feedback else ""
     )
     keywords = ", ".join(job_analysis.get("ats_keywords", [])[:6])
+    pillars_block = (
+        "\nROLE PILLARS — shape S3 and S4 around these specific themes:\n"
+        + "\n".join(f"  - {p}" for p in role_pillars)
+        + "\n"
+        if role_pillars else ""
+    )
 
     response = client.messages.create(
         model=MODEL,
@@ -223,12 +236,12 @@ BUILDING MATERIALS — use these, don't reinvent them:
 
 ROLE: {job_analysis.get('job_title', 'Unknown')}
 ATS KEYWORDS — weave in 2-3 naturally: {keywords}
-{feedback_block}
+{pillars_block}{feedback_block}
 STRUCTURE — 3 to 4 sentences, each with a specific job:
   S1 - Who: Shape the Identity fragment above into a clean opening clause. Mirror the role title. Around 15 words.
   S2 - Proof: Lead with the anchor achievement. Number or rank first. Around 15-20 words.
-  S3 - Capability: Use the skills above in the context of what they achieve — not just a list. Around 15 words.
-  S4 - Fit (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Around 10-15 words.
+  S3 - Capability: Use the skills above in the context of what they achieve — not just a list. Echo the role pillars above if provided. Around 15 words.
+  S4 - Fit (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Reference the role pillars if provided. Around 10-15 words.
 
 VOICE — matters as much as structure:
   - Write as a real person describes themselves. Not a corporate document.
@@ -328,7 +341,7 @@ Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable fee
         return {"score": 0, "feedback": "Scoring failed — retrying."}
 
 
-def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str) -> str:
+def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, role_pillars: list = None) -> str:
     """
     Generate a professional summary using a decomposed, validated, scored pipeline.
 
@@ -345,7 +358,7 @@ def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str) 
     prior_feedback = ""
 
     for attempt in range(5):
-        summary = _write_summary(ingredients, job_analysis, base_cv_text, prior_feedback)
+        summary = _write_summary(ingredients, job_analysis, base_cv_text, prior_feedback, role_pillars)
         summary = _validate_and_fix(summary, job_analysis.get("company_name", ""))
         result = _score_summary(summary, job_analysis, anchor)
 
@@ -373,7 +386,11 @@ def tailor_cv(
 ) -> dict:
     """Edit the Base CV bullets to fit a specific role. Returns dict with bullets per employer.
     Summary is generated separately via generate_summary()."""
-    keywords = ", ".join(job_analysis.get("ats_keywords", [])[:12])
+    ats_keywords = job_analysis.get("ats_keywords", [])
+    priority_keywords = ", ".join(ats_keywords[:4])
+    secondary_keywords = ", ".join(ats_keywords[4:10])
+    role_pillars = match_gaps.get("role_pillars", [])
+    role_pillars_formatted = "\n".join(f"- {p}" for p in role_pillars) if role_pillars else ""
 
     json_schema = """{
   "admaven_bullets": ["<bullet 1>", "<bullet 2>", "<bullet 3>"],
@@ -387,9 +404,14 @@ def tailor_cv(
 Return ONLY valid JSON — no markdown fences, no explanation:
 {json_schema}
 
+ROLE PILLARS — what this role is fundamentally about:
+{role_pillars_formatted}
+
+For each employer section, order bullets so the one most directly relevant to these pillars comes first.
+Relevance to the pillars takes priority over any other ordering.
+
 WHAT TO EDIT:
-- Rewrite bullets to lead with the skills and outcomes most relevant to THIS job
-- Weave in ATS keywords naturally — do not force them
+- Rewrite bullets using the language and priorities of this specific role
 - Adjust tone to match what the job description asks for
 - 2-4 bullets per role
 
@@ -397,7 +419,11 @@ WHAT NOT TO CHANGE:
 - The facts and numbers — reframe HOW they are described, never change the actual figures
 - Never add experience not in the base CV or profile
 
-ATS KEYWORDS TO WEAVE IN: {keywords}
+ATS KEYWORD PLACEMENT RULES:
+Priority keywords (must appear — at least one per role section, ideally in the first bullet):
+{priority_keywords}
+Secondary keywords (use where they fit naturally — do not force all of them):
+{secondary_keywords}
 
 TONE AND WRITING RULES (follow without exception):
 {TONE_GUIDE}
@@ -421,12 +447,22 @@ TAILORING STRATEGY:
 Return ONLY valid JSON — no markdown fences, no explanation:
 {json_schema}
 
+ROLE PILLARS — what this role is fundamentally about:
+{role_pillars_formatted}
+
+For each employer section, order bullets so the one most directly relevant to these pillars comes first.
+
 RULES FOR BULLETS:
 - Every claim must be real and traceable to her profile below — do NOT invent anything
-- Naturally weave in these ATS keywords: {keywords}
 - Use strong action verbs (Led, Grew, Built, Managed, Launched, Closed, Delivered, etc.)
 - Quantify achievements wherever the profile supports it
 - 2-4 bullets per role
+
+ATS KEYWORD PLACEMENT RULES:
+Priority keywords (must appear — at least one per role section, ideally in the first bullet):
+{priority_keywords}
+Secondary keywords (use where they fit naturally — do not force all of them):
+{secondary_keywords}
 
 TONE AND WRITING RULES (follow without exception):
 {TONE_GUIDE}

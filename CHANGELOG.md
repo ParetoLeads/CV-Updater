@@ -5,6 +5,17 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.5.0 — 2026-05-17
+
+### Changed
+- `calculate_match_and_gaps` now returns a `role_pillars` field: 2-3 short JD-specific phrases describing what this role is fundamentally about (e.g. "pipeline reporting and forecasting", "CRM process optimisation"). Derived fresh from each JD — flexible alternative to rigid role archetypes.
+- `tailor_cv` keyword injection refactored: ATS keywords now split into `priority_keywords` (top 4, must appear — at least one per role section, ideally in the first bullet) and `secondary_keywords` (5-10, used where natural). Replaces the previous vague "weave in naturally" instruction.
+- `tailor_cv` bullet ordering now explicitly driven by `role_pillars`: first bullet of each employer section must be the one most relevant to the role pillars, not generic relevance. Instruction is concrete and pillar-referenced, not prose.
+- `generate_summary` and `_write_summary` accept optional `role_pillars` param; pillars are passed to S3 (capability) and S4 (fit) sentence guidance so the summary echoes the same themes as the bullets.
+- `main.py`: `role_pillars` extracted from `match_gaps` and passed to `generate_summary` after tailoring.
+
+---
+
 ## v2.4.0 — 2026-05-09
 
 ### Changed

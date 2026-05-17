@@ -196,6 +196,12 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.5.0 — 2026-05-17
+- Flexible role framing beats rigid archetypes. Instead of classifying jobs into fixed categories, `calculate_match_and_gaps` now derives `role_pillars` fresh from each JD — 2-3 concrete phrases describing what THIS role is fundamentally about. Every JD produces different pillars.
+- Structured keyword distribution increases ATS signal. Splitting keywords into priority (top 4, must appear in first bullet of each role) and secondary (natural placement) ensures coverage is systematic, not accidental.
+- Pillar-driven bullet ordering is more actionable than prose instructions. Telling Claude "order bullets so the one most relevant to [pillar 1] comes first" is more precise than "lead with what's most relevant to the job".
+- Summary S3/S4 now echo the same pillars as the bullets. The capability and fit sentences use the same role framing, creating a coherent document rather than a generic one.
+
 ### v2.4.0 — 2026-05-09
 - Positive structure beats negative rules. Giving Claude 6 "don't do X" rules leaves it free to fill space with vague-but-compliant filler. A 4-sentence structure guide (S1=identity, S2=proof, S3=capability, S4=fit) with per-sentence intent removes that latitude.
 - Every sentence must earn its place. The new rubric's `information_density` criterion catches filler that passes all regex checks — sentences with no number, no named tool, no domain term.
