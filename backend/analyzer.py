@@ -238,19 +238,20 @@ ROLE: {job_analysis.get('job_title', 'Unknown')}
 ATS KEYWORDS — weave in 2-3 naturally: {keywords}
 {pillars_block}{feedback_block}
 STRUCTURE — 3 to 4 sentences, each with a specific job:
-  S1 - Who: Shape the Identity fragment above into a clean opening clause. Mirror the role title. Around 15 words.
-  S2 - Proof: Lead with the anchor achievement. Number or rank first. Around 15-20 words.
+  S1 - Hook: Open with the anchor achievement — number or rank first, stated with confidence. Past employers may be named (e.g. "at AdMaven"). Do NOT name the hiring company. Around 15-20 words.
+  S2 - Context: Establish who she is — role title, years of experience, domain — in a way that makes S1 make sense. Around 15 words.
   S3 - Capability: Use the skills above in the context of what they achieve — not just a list. Echo the role pillars above if provided. Around 15 words.
   S4 - Fit (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Reference the role pillars if provided. Around 10-15 words.
 
 VOICE — matters as much as structure:
-  - Write as a real person describes themselves. Not a corporate document.
-  - Vary sentence length — a short punchy sentence followed by a medium one reads better than four sentences the same length.
+  - Write as a confident professional talking about themselves — not a corporate document.
+  - S1 should land like a fact, not a boast. Lead with the number. Let the achievement speak.
+  - Vary sentence length — a short punchy S1 followed by a medium S2 reads better than four sentences the same length.
   - Read it aloud before returning. If any sentence sounds like a template, rewrite it.
   - Banned constructions: "Specializing in...", "Expertise spans...", "this record reflects...", "brings a wealth of...", "known for...", "with a proven...".
   - Every sentence must earn its place. If it contains no concrete claim — no number, no named tool, no specific domain term — cut it or rewrite it.
   - No pronouns (I/she/he/they/her/his/their). Implied subject only.
-  - Do NOT name any company — not the employer, not the hiring company.
+  - Do NOT name the hiring company anywhere in the summary.
   - No soft-skill assertions: passionate, results-driven, detail-oriented, trusted advisor, dynamic, motivated, team player.
   - 55-70 words total. Count carefully.
 
@@ -327,11 +328,11 @@ ROLE: {job_analysis.get('job_title', '')}
 ANCHOR ACHIEVEMENT THAT SHOULD APPEAR: {anchor}
 
 RUBRIC (score each 0-2, total 0-10):
-1. anchor_fact: Is the quantified achievement specific, real, and prominent? (0=missing or vague, 1=present but buried past sentence 2, 2=leads or immediately follows identity sentence)
-2. professional_identity: Does sentence 1 establish who she is — role title, experience level, domain? (0=jumps straight to achievement with no identity, 1=title or domain present but incomplete, 2=clean identity: role + years + domain)
+1. anchor_fact: Does the quantified achievement open the summary as sentence 1, stated confidently with the number or rank first? (0=missing or vague, 1=present but not leading — buried in sentence 2 or later, 2=leads as sentence 1 with the number first)
+2. professional_identity: Does the summary establish who she is — role title, experience level, domain — by sentence 2 at the latest? (0=identity never appears, 1=title or domain present but incomplete, 2=clean identity: role + years + domain, appears in sentence 1 or 2)
 3. information_density: Does every sentence contain a concrete claim — a number, named tool, domain term, or specific skill? (0=one or more filler sentences with no concrete claim, 1=all sentences have claims but some are vague, 2=every sentence earns its place)
-4. no_violations: Free of pronouns, company names, and soft-skill assertions? (0=pronoun or company name present, 1=one minor soft-skill claim, 2=completely clean)
-5. natural_voice: Does it read like a real person, not a corporate template? Varied rhythm, no banned constructions ("Specializing in", "Expertise spans", "this record reflects", etc.)? (0=template feel or banned constructions present, 1=mostly natural but one stiff sentence, 2=reads naturally with varied rhythm)
+4. no_violations: Free of pronouns, the hiring company name, and soft-skill assertions? Past employer names (e.g. AdMaven) are allowed. (0=pronoun or hiring company name present, 1=one minor soft-skill claim, 2=completely clean)
+5. natural_voice: Does it read like a confident professional, not a corporate template? Varied rhythm, no banned constructions ("Specializing in", "Expertise spans", "this record reflects", etc.)? (0=template feel or banned constructions present, 1=mostly natural but one stiff sentence, 2=reads naturally with varied rhythm)
 
 Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable feedback on what to fix, or 'Passes all criteria' if score >= 7>"}}"""}]
     )

@@ -5,6 +5,15 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.5.1 — 2026-05-17
+
+### Changed
+- Summary S1 is now achievement-first (narrative hook) instead of identity-first. S1 leads with the anchor achievement — number or rank first, stated with confidence. Past employers may be named in S1 (e.g. "at AdMaven"). S2 now carries the identity context (role title, years, domain).
+- `_score_summary` rubric updated to match: `anchor_fact` now requires the achievement to lead as sentence 1 (not "leads or immediately follows identity"); `professional_identity` now checks for identity by sentence 2 (not sentence 1); `no_violations` updated to allow past employer names while still banning the hiring company name.
+- `_write_summary` voice rules updated: S1 guidance added ("land like a fact, not a boast — lead with the number"); hiring company ban now explicitly scoped to the hiring company only (past employers allowed).
+
+---
+
 ## v2.5.0 — 2026-05-17
 
 ### Changed

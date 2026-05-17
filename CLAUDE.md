@@ -196,6 +196,11 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.5.1 — 2026-05-17
+- Narrative-first S1 works better than identity-first for AM/AE/partnerships roles. Recruiters hiring for relationship roles respond to confidence and results in the first line, not a title label. Leading with the anchor achievement ("Ranked #1 across 300+ accounts...") is more memorable and human than "Senior Account Manager with X years..."
+- Rubric must match the intended structure. Switching S1 and S2 without updating the rubric would cause the scorer to penalise the new format (it previously required identity in sentence 1). Both the prompt and the rubric were updated together.
+- Past employer names in S1 add credibility. Allowing "at AdMaven" in the summary is standard CV practice and adds context to the achievement. The hiring company ban stays — only the target company is stripped.
+
 ### v2.5.0 — 2026-05-17
 - Flexible role framing beats rigid archetypes. Instead of classifying jobs into fixed categories, `calculate_match_and_gaps` now derives `role_pillars` fresh from each JD — 2-3 concrete phrases describing what THIS role is fundamentally about. Every JD produces different pillars.
 - Structured keyword distribution increases ATS signal. Splitting keywords into priority (top 4, must appear in first bullet of each role) and secondary (natural placement) ensures coverage is systematic, not accidental.
