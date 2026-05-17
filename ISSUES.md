@@ -7,6 +7,13 @@ _No open issues._
 
 ## Resolved Issues
 
+### [#14] Summary hallucinated Salesforce despite gap analysis identifying it as missing — spotted v2.5.0, fixed v2.5.2
+Gap analysis correctly flagged Salesforce as a skill Tahel doesn't have. Summary still claimed "Salesforce-driven pipeline forecasting" because `generate_summary` received ATS keywords (which included Salesforce from the JD) with no knowledge of the gap list. Fixed by extracting gap skill names from `match_gaps.gaps` in `main.py` and passing them as a prohibition block to Stage 1 (`_extract_ingredients`) and Stage 2 (`_write_summary`) of the summary pipeline.
+
+---
+
+## Resolved Issues
+
 ### [#13] Summary contained filler sentences and missing professional identity — spotted v2.3.0, fixed v2.4.0
 Output passed all hard validation checks (no pronouns, no company name, word count OK) but contained sentences with no concrete information — "this record reflects consistent performance across full account lifecycles", "Partner success and account management expertise spans programmatic monetization across diverse publisher portfolios". Root cause: Stage 2 prompt gave only negative rules, leaving Claude free to fill space with vague-but-compliant filler. Second issue: no identity sentence (title + years + domain) in sentence 1, which ATS research shows is the highest-impact line. Fixed by: expanding Stage 1 to return identity/anchor/skills as a dict; rewriting Stage 2 with a 4-sentence structure guide and a voice contract banning template constructions; adding `professional_identity`, `information_density`, and `natural_voice` to the Stage 4 rubric.
 

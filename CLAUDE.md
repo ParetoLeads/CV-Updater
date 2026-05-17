@@ -196,6 +196,10 @@ This applies to every code change, no matter how small.
 - Company URL is now auto-discovered via Tavily if absent from the job posting
 - Scraping multiple page types (homepage, about, product) gives Claude better context than homepage alone
 
+### v2.5.2 — 2026-05-17
+- Gap data must be wired into the summary pipeline, not just the bullets. The gap analysis runs before the summary but was never connected to it. Result: Claude saw "Salesforce" in the ATS keywords and invented its use. Fix: pass gap skill names as an explicit blacklist to Stage 1 (ingredients) and Stage 2 (write).
+- Banning a construction by name is more reliable than describing it abstractly. Adding "Uses [tool] to [outcome]" to the banned list catches it; telling Claude to "not sound like a tool inventory" does not.
+
 ### v2.5.1 — 2026-05-17
 - Narrative-first S1 works better than identity-first for AM/AE/partnerships roles. Recruiters hiring for relationship roles respond to confidence and results in the first line, not a title label. Leading with the anchor achievement ("Ranked #1 across 300+ accounts...") is more memorable and human than "Senior Account Manager with X years..."
 - Rubric must match the intended structure. Switching S1 and S2 without updating the rubric would cause the scorer to penalise the new format (it previously required identity in sentence 1). Both the prompt and the rubric were updated together.

@@ -185,8 +185,14 @@ Rules:
 
 # ── Summary pipeline ──────────────────────────────────────────────────────────
 
-def _extract_ingredients(job_analysis: dict, base_cv_text: str) -> dict:
+def _extract_ingredients(job_analysis: dict, base_cv_text: str, gap_skills: list = None) -> dict:
     """Stage 1: Extract structured building materials for the summary (identity, anchor, skills)."""
+    gap_block = (
+        "\nSKILLS/TOOLS SHE DOES NOT HAVE — do NOT select any of these as skills:\n"
+        + "\n".join(f"  - {g}" for g in gap_skills)
+        + "\n"
+        if gap_skills else ""
+    )
     response = client.messages.create(
         model=MODEL,
         max_tokens=200,
@@ -194,7 +200,7 @@ def _extract_ingredients(job_analysis: dict, base_cv_text: str) -> dict:
 
 ROLE: {job_analysis.get('job_title', 'Unknown')}
 KEY REQUIREMENTS: {', '.join(job_analysis.get('key_requirements', [])[:5])}
-
+{gap_block}
 CV:
 {base_cv_text[:4000]}
 
@@ -210,7 +216,7 @@ Rules: every field must be grounded in the CV — do not invent. No em dashes.""
     return _parse_json(response.content[0].text)
 
 
-def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, prior_feedback: str = "", role_pillars: list = None) -> str:
+def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, prior_feedback: str = "", role_pillars: list = None, gap_skills: list = None) -> str:
     """Stage 2: Write one summary using pre-extracted building materials."""
     feedback_block = (
         f"\nPRIOR ATTEMPT FEEDBACK — fix these specifically:\n{prior_feedback}\n"
@@ -222,6 +228,12 @@ def _write_summary(ingredients: dict, job_analysis: dict, base_cv_text: str, pri
         + "\n".join(f"  - {p}" for p in role_pillars)
         + "\n"
         if role_pillars else ""
+    )
+    gap_block = (
+        "\nSKILLS/TOOLS SHE DOES NOT HAVE — do NOT claim any of these, even if they appear in the ATS keywords:\n"
+        + "\n".join(f"  - {g}" for g in gap_skills)
+        + "\n"
+        if gap_skills else ""
     )
 
     response = client.messages.create(
@@ -235,12 +247,12 @@ BUILDING MATERIALS — use these, don't reinvent them:
   Skills to feature: {ingredients.get('skills', '')}
 
 ROLE: {job_analysis.get('job_title', 'Unknown')}
-ATS KEYWORDS — weave in 2-3 naturally: {keywords}
+{gap_block}ATS KEYWORDS — weave in 2-3 naturally (only if they reflect real experience): {keywords}
 {pillars_block}{feedback_block}
 STRUCTURE — 3 to 4 sentences, each with a specific job:
   S1 - Hook: Open with the anchor achievement — number or rank first, stated with confidence. Past employers may be named (e.g. "at AdMaven"). Do NOT name the hiring company. Around 15-20 words.
   S2 - Context: Establish who she is — role title, years of experience, domain — in a way that makes S1 make sense. Around 15 words.
-  S3 - Capability: Use the skills above in the context of what they achieve — not just a list. Echo the role pillars above if provided. Around 15 words.
+  S3 - Edge: Name what makes her distinctly effective in this type of role — a combination, a behaviour, or an approach that isn't obvious from S1+S2. Feel like a pitch, not a tool inventory. Do NOT use "Uses [tool] to [outcome]" or "Leverages [tool] to [outcome]". Around 15 words.
   S4 - Fit (optional but preferred): One crisp factual statement connecting her background to what this type of role needs. Reference the role pillars if provided. Around 10-15 words.
 
 VOICE — matters as much as structure:
@@ -248,7 +260,7 @@ VOICE — matters as much as structure:
   - S1 should land like a fact, not a boast. Lead with the number. Let the achievement speak.
   - Vary sentence length — a short punchy S1 followed by a medium S2 reads better than four sentences the same length.
   - Read it aloud before returning. If any sentence sounds like a template, rewrite it.
-  - Banned constructions: "Specializing in...", "Expertise spans...", "this record reflects...", "brings a wealth of...", "known for...", "with a proven...".
+  - Banned constructions: "Specializing in...", "Expertise spans...", "this record reflects...", "brings a wealth of...", "known for...", "with a proven...", "Uses [tool] to...", "Leverages [tool] to...".
   - Every sentence must earn its place. If it contains no concrete claim — no number, no named tool, no specific domain term — cut it or rewrite it.
   - No pronouns (I/she/he/they/her/his/their). Implied subject only.
   - Do NOT name the hiring company anywhere in the summary.
@@ -332,7 +344,7 @@ RUBRIC (score each 0-2, total 0-10):
 2. professional_identity: Does the summary establish who she is — role title, experience level, domain — by sentence 2 at the latest? (0=identity never appears, 1=title or domain present but incomplete, 2=clean identity: role + years + domain, appears in sentence 1 or 2)
 3. information_density: Does every sentence contain a concrete claim — a number, named tool, domain term, or specific skill? (0=one or more filler sentences with no concrete claim, 1=all sentences have claims but some are vague, 2=every sentence earns its place)
 4. no_violations: Free of pronouns, the hiring company name, and soft-skill assertions? Past employer names (e.g. AdMaven) are allowed. (0=pronoun or hiring company name present, 1=one minor soft-skill claim, 2=completely clean)
-5. natural_voice: Does it read like a confident professional, not a corporate template? Varied rhythm, no banned constructions ("Specializing in", "Expertise spans", "this record reflects", etc.)? (0=template feel or banned constructions present, 1=mostly natural but one stiff sentence, 2=reads naturally with varied rhythm)
+5. natural_voice: Does it read like a confident professional, not a corporate template? Varied rhythm, no banned constructions ("Specializing in", "Expertise spans", "this record reflects", "Uses [tool] to [outcome]", "Leverages [tool] to [outcome]", etc.)? (0=template feel or banned constructions present, 1=mostly natural but one stiff sentence, 2=reads naturally with varied rhythm)
 
 Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable feedback on what to fix, or 'Passes all criteria' if score >= 7>"}}"""}]
     )
@@ -342,7 +354,7 @@ Return exactly: {{"score": <integer 0-10>, "feedback": "<specific actionable fee
         return {"score": 0, "feedback": "Scoring failed — retrying."}
 
 
-def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, role_pillars: list = None) -> str:
+def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, role_pillars: list = None, gap_skills: list = None) -> str:
     """
     Generate a professional summary using a decomposed, validated, scored pipeline.
 
@@ -351,7 +363,7 @@ def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, 
     Stage 3: Python validate + targeted Claude fix
     Stage 4: Score against rubric (Claude) — retry Stage 2-3 up to 5 times until score >= 7
     """
-    ingredients = _extract_ingredients(job_analysis, base_cv_text)
+    ingredients = _extract_ingredients(job_analysis, base_cv_text, gap_skills)
     anchor = ingredients.get("anchor", "")
 
     best_summary = ""
@@ -359,7 +371,7 @@ def generate_summary(job_analysis: dict, base_cv_text: str, tahel_profile: str, 
     prior_feedback = ""
 
     for attempt in range(5):
-        summary = _write_summary(ingredients, job_analysis, base_cv_text, prior_feedback, role_pillars)
+        summary = _write_summary(ingredients, job_analysis, base_cv_text, prior_feedback, role_pillars, gap_skills)
         summary = _validate_and_fix(summary, job_analysis.get("company_name", ""))
         result = _score_summary(summary, job_analysis, anchor)
 

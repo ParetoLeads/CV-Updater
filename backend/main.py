@@ -129,7 +129,8 @@ async def _process_stream(req: JobRequest):
 
         yield _event("summarising", "Generating professional summary...")
         role_pillars = match_gaps.get("role_pillars", [])
-        tailored_cv["summary"] = generate_summary(job_analysis, base_cv_text, tahel_profile, role_pillars)
+        gap_skills = [g.get("gap", "") for g in match_gaps.get("gaps", []) if g.get("gap")]
+        tailored_cv["summary"] = generate_summary(job_analysis, base_cv_text, tahel_profile, role_pillars, gap_skills)
 
         yield _event("creating", "Creating tailored Google Doc...")
         cv_url, folder_url = create_tailored_cv_doc(tailored_cv, job_analysis)

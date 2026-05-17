@@ -5,6 +5,14 @@ Format: `vMAJOR.MINOR.PATCH — YYYY-MM-DD`
 
 ---
 
+## v2.5.2 — 2026-05-17
+
+### Fixed
+- **Summary hallucination bug:** Summary was claiming gap skills (e.g. Salesforce) despite the gap analysis correctly identifying them as missing. Root cause: `generate_summary` had no knowledge of identified gaps. Fix: gap skill names extracted from `match_gaps.gaps` in `main.py` and passed through `generate_summary` → `_extract_ingredients` (Stage 1) and `_write_summary` (Stage 2) as an explicit prohibition block.
+- **Rigid S3 voice ("Uses [tool] to [outcome]"):** S3 instruction rewritten from "Capability" (tool inventory) to "Edge" — what makes her distinctly effective, as a pitch rather than a job description. "Uses [tool] to [outcome]" and "Leverages [tool] to [outcome]" added to banned constructions in both the prompt and the rubric's `natural_voice` criterion.
+
+---
+
 ## v2.5.1 — 2026-05-17
 
 ### Changed
